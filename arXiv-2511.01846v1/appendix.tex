@@ -1,0 +1,925 @@
+\onecolumn
+\section*{Limitations}
+Our work has two primary limitations: evaluation cost and the risk of data contamination.
+
+% \textit{Evaluation Cost and Usability.} The first limitation is the cost required for evaluation. While we provide \ag{} to automate grading for \iab{}, its reliance on API calls to a frontier model like \gemini{} can be expensive. This challenge is more pronounced for \ipb{}. Furthermore, 
+\textit{Evaluation Cost.} While our
+% programmatic
+automatic
+grader, \pg{}, correlates strongly with human scores, it is not a perfect substitute and can introduce noise. Consequently, definitive assessments still require verification by human experts, who are both costly and difficult to source.
+
+% \textit{Risk of Future Data Contamination.}
+\textit{Future Data Contamination.}
+The second limitation is the risk of long-term data contamination.
+As \ib{} is publicly released, its problems and solutions will likely be scraped and absorbed into future training datasets. This threatens the integrity of the benchmark, as models may achieve high scores by memorizing answers rather than demonstrating genuine reasoning. Preventing this form of benchmark decay remains a significant, field-wide challenge.
+
+\section{\iabs{}}
+\subsection{Examples}
+We show examples of \iab{} in Table~\ref{tab:imo-answer-bench-examples}.
+
+
+
+\begin{table*}[tbh!]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{p{1cm}p{1.6cm}p{7cm}p{9cm}}
+\toprule
+\textbf{Subj.} & \textbf{Source} & \textbf{Original} & \textbf{Robustified} \\
+\midrule
+% \rotatebox{90}{Algebra}
+A & Austria MO 2017 & \textit{Determine the maximum $M$ of $x+y+z$ where
+$x,y$ and $z$ are positive real numbers with}
+\[
+16xyz=(x+y)^{2}(x+z)^{2}.
+\] & \textit{Let $a, b, c$ be lengths of the sides of some triangle of positive area, satisfying}
+\[
+    a^2b^2 = 2(a + b - c)(b + c - a)(c + a - b).
+\]
+\textit{Find the maximum value for $a + b + c$.} \\
+\midrule
+%\rotatebox{90}{Combinatorics} 
+C & USA TST 2005 & Let $n$ be an integer greater than $1$. For a positive integer $m$, let $S_{m}= \{ 1,2,\ldots, mn\}$. Suppose that there exists a $2n$-element set $T$ such that
+(a) each element of $T$ is an $m$-element subset of $S_{m}$;
+(b) each pair of elements of $T$ shares at most one common element;
+and
+(c) each element of $S_{m}$ is contained in exactly two elements of $T$.
+Determine the maximum possible value of $m$ in terms of $n$. & For a positive integer $m$, let $S_{m}= \{ 1,2,\ldots, 25m\}$. Suppose that there exists a $\underbrace{\text{$50$-element}}_{\text{Modify numerical value}}$ set $T$ such that:
+\begin{enumerate}
+    \item Each element of $T$ is an $m$-element subset of $S_{m}$; 
+    \item Each pair of elements of $T$ shares at most one common element;
+    \item Each element of $S_{m}$ is contained in exactly two elements of $T$.
+\end{enumerate}
+Let $P$ be a set of $50$ random integers.
+Suppose we define a function $\underbrace{\text{$f(x)=x^2+2x+1$}}_{\text{Add distractors}}$.
+Determine the maximum possible value of $m$. \\ 
+\midrule
+G & USA TST 2024 & Let $ABC$ be a triangle with incenter $I$. Let segment $AI$ intersect the incircle of triangle $ABC$ at point $D$. Suppose that line $BD$ is perpendicular to line $AC$. Let $P$ be a point such that $\angle BPA = \angle PAI = 90^\circ$. Point $Q$ lies on segment $BD$ such that the circumcircle of triangle $ABQ$ is tangent to line $BI$. Point $X$ lies on line $PQ$ such that $\angle IAX = \angle XAC$. Prove that $\angle AXP = 45^\circ$.
+& Let $ XYZ $ be a triangle with incenter $ J $. Let segment $ XJ $ meets the incircle of triangle $ XYZ $ at point $ K $. Suppose that the angle created by line $ YK $ and line $ XZ $ is $90^\circ$. Let $ R $ be a point such that $ \angle YRX = \angle RXJ = 90^\circ $. Point $ S $ lies on segment $ YK $ such that the circumcircle of triangle $ XYS $ is tangent to line $ YJ $. Point $ T $ lies on line $ RS $ such that $ \angle JXT = \angle TXZ $. Let $\gamma$ be the value of $\angle XTR$ in terms of degree, $\underbrace{\text{compute} \ \frac{\gamma}{3}}_{\text{compute instead prove}}$.
+\\
+% Harvard MIT Math Tournament 2008 & Let $ ABC$ be a triangle, and $ I$ its incenter. Let the incircle of $ ABC$ touch side $ BC$ at $ D$, and let lines $ BI$ and $ CI$ meet the circle with diameter $ AI$ at points $ P$ and $ Q$, respectively. Given $ BI = 6, CI = 5, DI = 3$, determine the value of $ \left( DP / DQ \right)^2$. & Let triangle $XYZ$ be a triangle, and let $J$ be its incenter. Let the incircle of triangle $XYZ$ touch side $YZ$ at $W$, and let lines $XJ$ and $YJ$ meet the circle with diameter $AJ$ at points $M$ and $N$ respectively. Given $\underbrace{XJ = 8, YJ = 6, WJ = 4}_{\text{Modify numerical value}}$, $\underbrace{\text{determine the value of } \frac{WM}{WN}}_{\text{Modify algebraic expressions}}$. \\
+\bottomrule
+N & Czech-Slovak Math Olympiad 2017  &Let $k\neq0$ be an integer and suppose that there the number of ordered
+pairs $(x,y)$ of integers satisfying
+\[
+k=\frac{x^{2}-xy+2y^{2}}{x+y}
+\]
+is odd. Find all possible values of $k$. & Find all even integers $d$ such that the number of ordered integer pairs $(x, y)$ satisfying
+\[
+    \underbrace{(x + 2y - d)^2 = xy}_{\text{substitute $x \leftarrow x + y$, $y \leftarrow k - y$, $d \leftarrow 2k$}}
+\]
+is even.
+\\
+\bottomrule
+
+\end{tabular}%
+}
+\caption{Examples in the \iab{}, per category ({\bf A}lgebra, {\bf C}ombinatorics, {\bf G}eometry, {\bf N}umber Theory).}
+\label{tab:imo-answer-bench-examples}
+\end{table*}
+
+\subsection{Subject Distribution and Robustification Examples of \iabs{}}
+% \label{sec:iab-examples}
+
+At the IMO, the problems are typically classified into four main categories: Algebra, Combinatorics, Geometry and Number Theory. Therefore, we also structure our \iab{} in accordance to these four categories as well, where each category has exactly $100$ problems.
+
+\textbf{Algebra} is one of the core competencies for Math Olympiad students and appears at all levels of competitions. Distinct from previous benchmarks \cite{2103.03874}, \ib{} puts more emphasis on Math Olympiad topics, including inequalities, polynomials (including polynomial equations and factorization), functional equations, sequence problems and advanced topics such as Algebraic Number Theory.
+
+\textbf{Combinatorics} problems, despite requiring seemingly basic insights, are notoriously challenging. Successfully solving them serves as a strong indicator of a model’s reasoning capabilities.  The combinatorics set of this benchmark contains problems covering Graph Theory, Enumerative Combinatorics (combinatorial counting problems), Extremal Combinatorics, Existence Combinatorics (problems asking the existence of certain combinatorial objects), Additive Combinatorics, Set Combinatorics, Tiling, Combinatorial Geometry, Operations (problems involving operations, often requiring finding invariant or monovariant properties), and Game Theory. 
+
+\textbf{Geometry} problems at the IMO are well-known for their visual elegance. While there are several existing geometry benchmarks \cite{2103.03874}, they do not cover Math Olympiad level problems.  To address this discrepancy, \ib{} contains geometry problems with short answers spanning subcategories such as angle and sidelength computation, locus problems, and proof-based geometry problems, as well as unconventional categories such as 3D geometry and combinatorial geometry. Additionally, we would like to note that most Math Olympiad level geometry problems are proof-based, and so designing a Math Olympiad level short-answer benchmark for geometry is highly non-trivial.
+
+\textbf{Number Theory} problems typically consist of problems involving objects and properties derived from integers and arithmetic functions, spanning various topics such as Diophantine equations, divisibility problems, polynomials, sequence problems, functional equation problems on the set of integer, existence problems, problems involving arithmetic functions (such as divisor functions, fractional functions), set problems, number theoretic game problems and straategies such as modular analysis, divisor analysis and base representation problems.
+
+These problems serve as a good representation of Math Olympiad problems at various levels and across different national, regional and international contests, as well as the topics covered in these contests. A strong model performance would suggest a high competence level as well as a good knowledge coverage since certain problems can only be solved with a particular problem solving strategy, without which the model would struggle to provide a rigorous with the correct answer.
+
+\subsection{Effects of robustification} \label{appendix:additional_results}
+To examine the effect of robustification for \iab{}, we also evaluate on the original, unmodified problems and present the results in Table \ref{tab:imo-answer-bench-original-result}. The models perform significantly better on the original problems, where the gap could be as high as \textbf{$11.2\%$} for \ofourmini{}. This indicates that our robustification effort does create a significant challenge for the models.
+
+\begin{table*}[h!] % I added the table* environment and placement specifier for a complete example
+\centering
+\label{tab:math-comparison}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{l|cccc|c}
+\toprule
+\textbf{Model} & \textbf{Algebra} & \textbf{Combinatorics} & \textbf{Geometry} & \textbf{Number Theory} & \textbf{Overall accuracy} \\
+\midrule
+\textbf{\grok{} (Original)} & \bf{78.8\%} & \bf{61.8\%} & 81.4\% & 78.3\% & \textbf{75.0\%} \textcolor{blue}{\scriptsize (+1.9)} \\
+\grok{} (Robustified) & 75.5\% & 55.9\% & 80.1\% & 80.9\% & 73.1\% \\
+\midrule
+\textbf{\gemini{} (Original)} & 77.8\% & 53.0\% & 77.4\% & \bf{78.8\%} & \textbf{71.7}\% \textcolor{blue}{\scriptsize (+3.5)} \\
+\gemini{} (Robustified) & 73.4\% & 48.0\% & 74.2\% & 77.1\% & 68.2\% \\
+\midrule
+\textbf{\ofourmini{} (Original)} & 75.1\% & 52.9\% & \bf{82.5\%} & 75.1\% & \textbf{71.4}\% \textcolor{blue}{\scriptsize (+3.5)} \\
+\ofourmini{} (Robustified) & 71.2\% & 46.6\% & 78.4\% & 75.3\% & 67.9\% \\
+\midrule
+\textbf{\othree{}(Original)} & 67.4\% & 46.8\% & 74.1\% & 67.5\% & \textbf{63.9}\% \textcolor{blue}{\scriptsize  (+2.8)} \\
+\othree{} (Robustified) & 62.8\% & 43.0\% & 70.6\% & 68.0\% & 61.1\% \\
+\midrule
+\textbf{\sonnet{} (Original)} & 28.2\% & 15.5\% & 27.6\% & 27.6\% & \textbf{24.8}\% \textcolor{blue}{\scriptsize (+1.8)} \\
+\sonnet{} (Robustified) & 20.6\% & 17.8\% & 26.0\% & 27.6\% & 23.0\% \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Comparison between \iab{} results (Robustified) and results for \iab{} before robustification (Original). Results are averaged over 8 samples.}
+\label{tab:imo-answer-bench-original-result}
+\end{table*}
+
+
+\subsection{Towards Consistent Problem Statements and Answer Evaluation}
+\label{sec:consistent-eval}
+Another common issue with language models solving complex Math Olympiad problems is that these models often misinterpret the statement of such problems, or the problem formulation leads the models to produce unintended outputs. Thus, we employ several additional strategies on top of robustification to ensure that the models can interpret the problems properly as follows.
+\begin{itemize}
+    \item Instead of asking for a series of numbers satisfying certain conditions (which is hard to verify), we instead reformulate the problem so that its answer is a unique number that is the sum or some other non-trivial function of many inputs.
+    \item Simplifying the answer as much as possible to avoid confusion.
+    \item Being more specific with the problem statement to excuse possible issues with special characters, such as angle degrees in geometry problems.
+    \item Avoiding questions with binary answers (yes/no), such as existence questions (which are extremely common in Math Olympiad contests), as they can be guessed without solving the problem or proving the result rigorously. Instead, we will reformulate the problem in such a way that it would produce a non-trivial answer.
+\end{itemize}
+
+\subsubsection{Ensuring unique non-trivial answer}
+\label{ssec: design-non-trivial-answer}
+\paragraph{Example 1} In this example, instead of asking the model to characterize all such numbers $m$, we ask the model to compute a certain expression, which results in $1012$, a value that the model is unlikely to guess by mere chance.
+
+\textit{Original problem}: "For a positive integer $m$, let $a_1, a_2, \ldots, a_{m+1}$ satisfy $3^i < a_i < 3^{i+1}$ for each $i$. Find the maximum and minimum possible values of \begin{align} \sum_{1\leqslant x\leqslant m+1}\prod_{y\neq x}\frac{a_{x}a_{y}-1}{a_{x}-a_{y}}. \end{align}"
+
+\textit{Original answer}: “maximum of $0$ and minimum of $0$ if $m$ is odd, and maximum of $1$ and minimum of $1$ if $m$ is even.“
+
+\textit{Modified problem}: “For a positive integer $m$, let $a_1, a_2, \ldots, a_{m+1}$ satisfy $3^i < a_i < 3^{i+1}$ for each $i$. Let \begin{align} A_m = \sum_{1\leqslant x\leqslant m+1}\prod_{y\neq x}\frac{a_{x}a_{y}-1}{a_{x}-a_{y}}. \end{align} Find $\sum_{i=1}^{2025} A_m^2$”
+
+\textit{Modified answer}: “1012”
+
+\paragraph{Example 2} In this example, instead of asking the model to characterize all solution tuples, which can be hard to evaluate in the natural language form, we ask the models to compute the sum of the elements.
+
+\textit{Original problem}: “Let $a_1, a_2, \ldots, a_{2025}$ be positive integers such that for each positive integer $m$,
+
+$$\left(\left (\sum^{2025}_{j=1} j a^n_j \right)-1\right)^{\frac{1}{n+1}}$$
+
+is an integer. Find all possible $(a_1, a_2, \ldots, a_{2025})$.”
+
+\textit{Original answer}: “$\left(a_{1},\ldots,a_{2025}\right)=(1,k,\ldots,k)$ with $k=2+3+\cdots+2025=2051324$”
+
+\textit{Modified problem}: “Let $a_1, a_2, \ldots, a_{2025}$ be positive integers such that for each positive integer $m$,
+
+$$\left(\left (\sum^{2025}_{j=1} j a^n_j \right)-1\right)^{\frac{1}{n+1}}$$
+
+is an integer. Find all possible values of $a_1+a_2+ \cdots +a_{2025}$.”
+
+\textit{Modified answer}: “4151879777”
+
+\paragraph{Example 3} In this example, instead of asking the model to characterize all such numbers $m$, we ask the models to \emph{count} the number of such numbers in a certain range, which results in $1009$, a value that the model is unlikely to guess by mere chance.
+
+\textit{Original problem}: “Find all positive integers $m \geq 2$ that satisfy the following condition: For any $m$ distinct positive integers $(n_1, \ldots, n_m)$, at least one of the following two conditions holds: $n_1 + \ldots + n_m$ is a multiple of $m$, or there exists a permutation $(k_1, \ldots, k_m)$ such that $k_1 + 2k_2 + \ldots + mk_m$ is a multiple of $m$.”
+
+\textit{Original answer}: “All powers of 2 and all odd numbers”
+
+\textit{Modified problem}: “Find the number of all positive integers $2\leq m \leq 2000$ that satisfy the following condition: For any $m$ distinct positive integers $(n_1, \ldots, n_m)$, at least one of the following two conditions holds: $n_1 + \ldots + n_m$ is a multiple of $m$, or there exists a permutation $(k_1, \ldots, k_m)$ such that $k_1 + 2k_2 + \ldots + mk_m$ is a multiple of $m$.”
+
+\textit{Modified answer}: “1009”
+
+\subsubsection{Answer simplification}
+\label{ssec: answer-simplification}
+\paragraph{Example} In the example below the original answer mixes notations and adds a potentially confusing quantifier, so we simplify it.
+
+\textit{Original Problem}: “Let $P$ be a function from the set of integers to itself such that for all integers $h, m$, $P^{h^2 + m^2}(h+m-1) = mP(m-1) + hP(h-1) + (h+m-1)$. Find all possible functions $P$.”
+
+\textit{Original answer}: “$P\equiv -1$ or $P(x)=x+1$ for all $x\in\mathbb{Z}$.”
+
+\textit{Modified/simplified answer}: “$P(x)=-1, P(x)=x+1$”
+
+\subsubsection{Handling geometric quantities}
+\label{ssec: geometry-example}
+\paragraph{Example} For geometry, if the model is asked to find an angle, we make sure to include “in degrees” in the problem statement. This prevents problems mixing radians and degrees and model misinterpretations of special characters marking degrees such as “\^{}o” or “\^{} \{$\backslash$ circ\}”.
+
+\subsubsection{Reformulating questions with binary answers}
+\label{ssec: handling-binary-answers}
+
+\paragraph{Example} Below is an interesting example where the problem is very difficult but the answer is a binary yes/no, which can be guessed without solving the problem. Therefore, instead of asking the model to show existence, we ask the model to find the smallest positive integer to satisfy such a property, which retains the difficulty level while preventing the model from guessing the answer.
+
+\textit{Original problem}: “Is there a positive integer $n$ such that $\frac{(a+b)(b+c)(c+a)+a+b+c}{abc} = n$ for infinitely many integer triples $(a,b,c)$?”
+
+\textit{Original answer}: “It exists”
+
+\textit{Modified problem}: “Find the smallest positive integer $n$ such that there exists infinitely many triple $(a,b,c)$ of distinct positive integers such that $\frac{(a+b)(b+c)(c+a)+a+b+c}{4abc} = n$.”
+
+\textit{Modified answer}: “3”
+
+
+
+\subsection{Query prompt for \ags{}} \label{subsec:answergrader-prompt}
+The following prompt was used to query the \ag{} for \iab{}
+\begin{quote}
+\ttfamily % Use a monospaced font for the entire prompt
+
+% --- SYSTEM ROLE ---
+\noindent\textbf{\# System Role: Deterministic Mathematical Autograder}
+
+You are a precise, automated grading system. Your sole function is to determine if the final answer provided in the \texttt{Model Solution} is mathematically equivalent to the \texttt{Golden Answer}. You must NOT grade the reasoning or steps, only the final result.
+
+\medskip % Adds a bit of vertical space
+% --- GRADING GUIDELINES ---
+\noindent\textbf{\# 1. Grading Guidelines (Equivalence Rules)}
+
+Equivalence is mandatory for a correct grade. You must rigorously verify if the answers represent the exact same mathematical value or expression, even if the format differs.
+\begin{itemize}[label=*, leftmargin=*, nosep]
+    \item \textbf{**Algebraic Equivalence:**} e.g., `n(n+1)/2` is equivalent to `n\textasciicircum{}2/2 + n/2`. You must verify the algebra.
+    \item \textbf{**Numerical Equivalence:**} e.g., `1/2` is equivalent to `0.5`; `sqrt(2)/2` is equivalent to `1/sqrt(2)`.
+    \item \textbf{**Set/List Equivalence:**} Unless specified as an ordered tuple/vector, the order of elements does not matter (e.g., \{1, 2\} is equivalent to \{2, 1\}).
+    \item \textbf{**Partial Credit:**} No partial credit is allowed. If the answer is incomplete or partially incorrect, it is incorrect.
+    \item \textbf{**No Answers:**} If no clear, unambiguous final answer can be extracted, the solution must be graded as incorrect.
+\end{itemize}
+
+\medskip
+% --- OUTPUT PROTOCOL (Preserving original numbering "# 3.") ---
+\noindent\textbf{\# 3. Output Protocol (Strict Compliance Required)}
+
+You must execute the task using a two-part structure. Failure to follow this structure will result in task failure.
+
+\medskip
+% MODIFIED: Stars added back to Part 1 heading
+\noindent\textbf{**Part 1: Analysis (Chain-of-Thought)**} \\
+You MUST perform your analysis within \textless{}thinking\textgreater{}\textless{}/thinking\textgreater{} tags. Make your thinking concise. This section details your reasoning process and must follow these steps sequentially:
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{**Golden Answer:**} State the Golden Answer.
+    \item \textbf{**Extracted Model Answer:**} State the extracted answer based on the Extraction Protocol. If none found, state "No clear final answer found."
+    \item \textbf{**Equivalence Analysis:**} Compare the two answers using the Grading Guidelines. Detail the steps taken to verify mathematical equivalence (e.g., simplification, algebraic manipulation). You must actively try to prove they are the same before concluding they are different.
+    \item \textbf{**Conclusion:**} State the final determination ("Correct" or "Incorrect").
+\end{enumerate}
+
+\medskip
+% MODIFIED: Stars added back to Part 2 heading
+\noindent\textbf{**Part 2: Final Grade**} \\
+% MODIFIED: Stars added back to ONLY
+Immediately following the closing \textless{}/thinking\textgreater{} tag, output \textbf{**ONLY**} the final grade.
+\begin{itemize}[label=*, leftmargin=*, nosep]
+    \item If Correct: \textbackslash{}boxed\{Correct\}
+    \item If Incorrect: \textbackslash{}boxed\{Incorrect\}
+\end{itemize}
+
+\medskip
+% MODIFIED: Full scope of CRITICAL CONSTRAINT is now bolded with stars
+\noindent\textbf{**CRITICAL CONSTRAINT: Do not add any text, explanations, or formatting outside the \textless{}thinking\textgreater{} tags or the final \textbackslash{}boxed\{\} output.**}
+
+\medskip
+\hrule
+\medskip
+% --- EXAMPLE OUTPUT (Preserving original typo "exmaple" and content) ---
+\noindent\textbf{Output exmaple:}
+
+\textless{}thinking\textgreater{}
+\begin{enumerate}[label=\arabic*., leftmargin=*, topsep=2pt, itemsep=2pt]
+    \item \textbf{**Golden Answer:**} $(-\infty, -4) \cup (-4, \infty)$
+    \item \textbf{**Extracted Model Answer:**} $\emptyset$ (the empty set)
+    \item \textbf{**Equivalence Analysis:**}
+    \begin{quote}
+        The Golden Answer is a non-empty set of real numbers.
+        The Model Answer is the empty set.
+        These two sets are not equivalent. The empty set contains no elements, while the Golden Answer contains an infinite number of elements.
+    \end{quote}
+    \item \textbf{**Conclusion:**} Incorrect
+\end{enumerate}
+\textless{}/thinking\textgreater{} \\
+\textbackslash{}boxed\{Incorrect\}
+
+\medskip
+\hrule
+\medskip
+
+% --- INPUT DATA SECTION (Preserving original numbering "# 4.") ---
+\noindent\textbf{\# 4. Input Data} \\
+Here is the problem, model solution, and golden answer to grade:
+
+\noindent Problem: \verb|{Problem_Statement}| \\
+Model Solution: \verb|{Model_Solution}| \\
+Golden Answer: \verb|{Golden_Answer}|
+
+\end{quote}
+
+\section{\ipbs{}}
+\subsection{Examples}
+We show robustified examples of \ipb{} in Table~\ref{tab:imo2024-robustified-example}.
+
+\begin{table*}[tbh!]
+\centering
+\resizebox{\linewidth}{!}{%
+% Changed to a three-column layout
+\begin{tabular}{p{0.15\linewidth} p{0.425\linewidth} p{0.425\linewidth}}
+\toprule
+% Added "Source" header and corrected "originial" to "Original"
+\textbf{Source} & \textbf{Original} & \textbf{Robustified} \\
+\midrule
+% Added empty row for P1
+IMO '24 P1 & 
+Determine all real numbers $\alpha$ such that, for every positive integer $n,$ the integer
+$$\lfloor\alpha\rfloor +\lfloor 2\alpha\rfloor +\cdots +\lfloor n\alpha\rfloor$$is a multiple of $n.$ (Note that $\lfloor z\rfloor$ denotes the greatest integer less than or equal to $z.$ For example, $\lfloor -\pi\rfloor =-4$ and $\lfloor 2\rfloor= \lfloor 2.9\rfloor =2.$)
+& 
+For a real number $r$, let $A(r)$ denote the fractional part of $2r$ in its decimal representation. For a real number $r$ and a positive integer $n$, define $B(n,r)$ as
+ $$
+ B(n,r)=\sum_{k=1}^n A(kr).
+ $$
+ Find all positive real numbers $r$ such that $n(n+1)r - B(n,r)$ is a multiple of $n$ for all positive integers $n$.
+\\
+\midrule
+% Moved the original content to the row for P2
+IMO '24 P2 & 
+Determine all pairs $(a, b)$ of positive integers for which there exist positive integers $g$ and $N$ such that
+\[ \gcd(a^n + b, b^n + a) = g \]
+holds for all integers $n \geq N$. (Note that $\gcd(x, y)$ denotes the greatest common divisor of integers $x$ and $y$.)
+& 
+For given positive integers $x$ and $y$, we define a sequence $(a_n)_{n \ge 1}$ where $a_n$ is equal to
+ \[
+ \gcd \left( x^n +y , \, (y-x)\left(\sum_{i=0}^{n-1} y^i x^{n-i-1} - 1\right) \right)
+ \]
+ for all $n\in \mathbb{N}$. Find all pairs $(x,y)$ of positive integers such that the limit of the sequence $(a_n)$ exists. \\
+\midrule
+IMO '24 P5 & 
+Turbo the snail plays a game on a board with $2024$ rows and $2023$ columns. There are hidden monsters in $2022$ of the cells. Initially, Turbo does not know where any of the monsters are, but he knows that there is exactly one monster in each row except the first row and the last row, and that each column contains at most one monster.
+
+Turbo makes a series of attempts to go from the first row to the last row. On each attempt, he chooses to start on any cell in the first row, then repeatedly moves to an adjacent cell sharing a common side. (He is allowed to return to a previously visited cell.) If he reaches a cell with a monster, his attempt ends and he is transported back to the first row to start a new attempt. The monsters do not move, and Turbo remembers whether or not each cell he has visited contains a monster. If he reaches any cell in the last row, his attempt ends and the game is over.
+
+Determine the minimum value of $n$ for which Turbo has a strategy that guarantees reaching the last row on the $n$-th attempt or earlier, regardless of the locations of the monsters.
+& 
+On a table of size $3002\times3001$, a stone is placed on the leftmost
+ cell of the first row. James and Peter play a game on this table.
+ Peter selects $3000$ cells, under the rule that he must choose one
+ from each row except the first and last rows (i.e., the $1$st and
+ $3002$th row), and there must be at most one selected cell in each column.
+ James knows this rule too, but he doesn't know which cells Peter selected. The goal of James is to move the stone to the last row,
+ avoiding the cells selected by Peter. The stone can only move to adjacent
+ cells on the table. If the stone enters a cell selected by Peter,
+ James receives a penalty of 1 point, and the stone returns to its
+ initial position (i.e., the leftmost cell). Find the smallest positive
+ integer $n$ such that there exists a method for James to achieve
+ his goal before receiving a penalty of $n$ points.
+\\
+\bottomrule
+\end{tabular}%
+}
+% Updated the caption to be more general
+\caption{Examples of robustified problems, based on the IMO 2024 competition, for \ipb{}.}
+\label{tab:imo2024-robustified-example}
+\end{table*}
+
+\subsection{Proof Evaluation Guidelines for \ipbs{}}
+\label{sec:proof_evaluation}
+
+In a proof-based problem, the desired conclusion usually is either already given ("Prove that ...") or easy to guess ("Determine with proof whether ..."). Evaluating a solution consists of verifying that each logical step leading to the conclusion is valid. However, grading informal\footnote{i.e. written in natural language, as opposed to a formal language such as LEAN.} proofs contains inherently subjective elements, such as deciding whether a particular claim is justified in sufficient detail. Thus, unlike for short answers, which are either correct or incorrect, it is more appropriate to evaluate proofs on a higher resolution scale, where subjective elements matter less. Additionally, a solution may make partial progress by proving some but not all of the steps of a full solution. It is important to capture this during evaluation.
+
+Traditionally, proof-based Math Olympiad competitions, such as the IMO, score solutions on a 7-point scale. For each problem, a grading rubric outlines how many points are to be awarded for certain partial results. The great majority of solutions receive a polarizing score: either 5-7 points for being essentially correct, or 0-2 points if the problem remains unsolved, generally dictated by specific criteria in the rubric. Although problems often admit multiple solutions, it is rare for a solution to be so novel that it falls completely outside of the rubric (which usually covers the 1-2 most common solution approaches). Thus, despite some elements of subjectivity as mentioned above, scores are typically quite consistent across graders. For further insight into how Math Olympiad grading works, refer to \citet{chen:2023:guidance}.
+
+\subsection{Details of \linyang{}}
+\label{appendix:linyang}
+We use the exact agentic framework proposed in \citep{huang2025gemini25procapable}, which has been open sourced at \url{https://github.com/lyang36/IMO25} and also contains exact hyperparameters in its binary flags. We used the same thinking budget (32K tokens) per model call as mentioned in the paper.
+
+Given an initial solution, a single pipeline consists of repeated iterations (at most 30) of ``self-verification'' and ``bug-fixing'' on it. Specifically, if the current solution passes self-verification a fixed number (5) of times, then the solution is returned, but if at any time self-verification does not pass, then the model is instructed to observe any mistakes (``bugs'') and fix them, and restart the self-verification process. 
+
+Note that if a consecutive number (10) of verifications fail, then the pipeline exits without a solution. This entire pipeline will be run in parallel multiple times (100) as well, until there is at least one solution returned from any run. Theoretically the model could fail to find any solution after all parallel runs, which occurred for two \ipb{} (Advanced) problems. 
+
+
+\subsection{Common Model Mistakes}
+\label{sec:appendix}
+Here we list some common mistakes the models were making according to the graders.
+\begin{table*}[tbh!]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{p{8cm}|p{12cm}}
+\toprule
+\textbf{Problem} & \textbf{Model Solution} \\
+\midrule
+\textbf{PB-Basic-004}: We want to find all strictly increasing functions $\mathbb{R} \rightarrow \mathbb{R}$ such that:
+\begin{enumerate}
+    \item $g$ is surjective.
+    \item $g(g(x)) = g(x) + 20x, \, \forall x \in \mathbb{R}$.
+\end{enumerate}
+
+&
+
+First, let us restate the problem clearly:
+
+We want to find all strictly increasing functions $g: \mathbb{R} \rightarrow \mathbb{R}$ such that:  
+1) $g$ is surjective,  
+2) $g(g(x)) = g(x) + 20x$, for all $x \in \mathbb{R}$.
+
+
+
+1. Guess and check for linearity
+
+
+A common approach for such functional equations is to hypothesize that g might be linear (i.e., of the form $g(x) = ax + b$). Let us try this:
+
+Assume $g(x) = a x + b$, where $a, b \in \mathbb{R}$.
+
+Compute $g(g(x))$:
+
+$g(g(x)) = g(a x + b) = a(a x + b) + b = a^2 x + a b + b.$
+
+According to the functional equation, we need:
+$g(g(x)) = g(x) + 20x$.
+
+Hence,  
+$a^2 x + a b + b = (a x + b) + 20x = a x + 20x + b$.
+
+Matching coefficients:
+
+• Coefficient of x:  $a^2 = a + 20$.  
+• Constant term:      $a b + b = b$.
+
+From the constant term $a b + b = b$, we can factor out $b$:
+$b(a + 1) = b  \Rightarrow$  either $b = 0$ or $a + 1 = 1$.
+
+If $a + 1 = 1$, then $a = 0$, but that would force $g(x) = b$, a constant function, which cannot be strictly increasing nor surjective over all $\mathbb{R}$. Hence, that is not a valid solution.
+
+Therefore, we must have b = 0. Now the equation $a^2 = a + 20$ remains. Rewrite it as
+$a^2 - a - 20 = 0$.
+
+Factor or use the quadratic formula:
+$(a - 5)(a + 4) = 0$.
+
+This gives $a = 5$ or $a = -4$.
+
+
+
+2. Strictly increasing and surjective requirement
+
+
+Since g must be strictly increasing:
+
+• If a = -4, then g would be strictly decreasing, which is not allowed.  
+• Hence a must be positive, namely a = 5.
+
+So the only candidate under our linear assumption is
+$g(x) = 5x$.
+
+Check surjectivity: The map $x \rightarrow 5x$ is surjective, since for any $y \in \mathbb{R}$, we can choose $x = y/5$ to get $5x = y$. It is also strictly increasing because $5 > 0$.
+
+
+
+3. Verification in the original equation
+
+
+Finally, verify $g(x) = 5x$ satisfies $g(g(x)) = g(x) + 20x$:
+
+• $g(g(x)) = g(5x) = 5(5x) = 25x$.  
+• $g(x) + 20x = 5x + 20x = 25x$.
+
+These match, so $g(x) = 5x$ indeed satisfies both the functional equation and the given conditions.
+
+
+
+Conclusion
+
+
+Therefore, the only strictly increasing surjective function $g: \mathbb{R} \rightarrow \mathbb{R}$ satisfying $g(g(x)) = g(x) + 20x$ is  
+$g(x) = 5x$.
+
+\\
+\midrule
+
+% example 2
+
+\textbf{PB-Basic-005}: Let $P$ be a polynomial with real coefficients whose leading coefficient is $1$. Suppose that for all nonzero real numbers $x$, we have $P(x) + P(1/x) = \frac{P(x + 1/x) + P(x - 1/x)}{2}$. Determine all possibilities for $P$.
+
+&
+
+We consider polynomials of degree $2$ and $4$.
+For degree $2$, we found $P(x) = x^2$ is a solution.
+For degree $4$, we found $P(x) = x^4 + bx^2 + cx + 6$. We found $c = 0$. So $P(x) = x^4 + bx^2 + 6$ is a solution for any real number $b$.
+We verified that $P(x) = x^2$ and $P(x) = x^4 + bx^2 + 6$ satisfy the given condition.
+We showed that polynomials of odd degree are not solutions, and polynomials of degree $0$ and $1$ are not solutions.
+We need to show that there are no other solutions.
+Assume degree of $P$ is $n$. If $n$ is odd, we showed no solution. So $n$ must be even. Let $n = 2k$.
+We have shown that for $n=2$, $P(x) = x^2$ and for $n=4$, $P(x) = x^4 + bx^2 + 6$.
+
+Final Answer: The final answer is $P(x) = x^2 \text{ or } P(x) = x^4 + bx^2 + 6 \text{ for some real number } b$.
+
+\\
+\midrule
+
+\end{tabular}%
+}
+\caption{Examples of common mistakes that the models made for \ipb{}.}
+\label{tab:imo-incorrect-answers-examples}
+\end{table*}
+
+\subsubsection{Polynomial Assumption}
+
+% gemini flash PB basic 001, adv 021
+
+% o1 PB basic 001, 003,004
+
+\begin{problemexample}
+%[frametitle=Assuming strong assumptions example problem]
+\textbf{PB-Basic-004}: We want to find all strictly increasing functions $\mathbb{R} \rightarrow \mathbb{R}$ such that:
+\begin{enumerate}
+    \item $g$ is surjective.
+    \item $g(g(x)) = g(x) + 20x, \, \forall x \in \mathbb{R}$.
+\end{enumerate}
+\end{problemexample}
+
+% \textcolor{red}{Can you guys help me presenting the model answer here: o3 PB basic 004}
+
+A common mistake that language models typically make while solving problems is assuming strong assumptions on the problem without a legitimate or substantial justification for the assumptions. An instance of this behavior is the functional equation problem PB-Basic-004 as shown in Table \ref{tab:imo-incorrect-answers-examples}. The proof of o3 on this problem begins by considering the linear cases. 
+
+"We wish to find all strictly increasing and surjective functions $g : \mathbb{R} \to \mathbb{R}$ satisfying
+
+$g(g(x)) = g(x) + 20x$ for all $x \in \mathbb{R}$.
+
+A natural first step is to check if a linear function works. Suppose
+
+$g(x) = ax + b$
+
+...."
+
+After figuring out $a=5$ and $b=0$, the model claims that it found the unique solution, even though the only cases it checked were when $g$ is linear.
+
+"....
+
+Thus, the unique solution is $g(x) = 5x$."
+
+While the final answer is indeed correct, which a typical short answer benchmark would consider correct, the proof is not rigorous and would get little to no points in a proof-based competition such as the IMO.
+
+% Similar mistakes where the models falsely assume the solution to be a polynomial were made by the models, examples including Gemini Flash on ProofBench-basic 001, ProofBench-advanced 021, and O1 on ProofBench-basic 001 and 003.
+
+\subsubsection{Final Answer Guessing}
+
+% gemini flash PB Basic 005, 021
+
+% o1 PB Basic 008, 020
+
+\begin{problemexample}
+%[frametitle=Answer guessing example problem]
+\textbf{PB-Basic-005}: Let $P$ be a polynomial with real coefficients whose leading coefficient is $1$. Suppose that for all nonzero real numbers $x$, we have $P(x) + P(1/x) = \frac{P(x + 1/x) + P(x - 1/x)}{2}$. Determine all possibilities for $P$.
+\end{problemexample}
+
+% \textcolor{red}{Can you guys help me presenting the model answer here: gemini flash PB basic 005}
+
+In addition, there are the examples where models try to guess the  final answer by inspecting the cases when the variables are small. They do not try to actually prove why the guessed answer is correct. In the example problem PB-Basic-005, the model does case work with degree $n = 2$ and degree $n = 4$ and guesses the answer is $P(x) = x^2$ and $P(x) = x^4 + ax^2 + b$ without showing these are correct answers (in fact, the correct answer should have been $P(x) = a(x^4+6) + bx^2$) nor that these are all the answers. That being said, the models often can get a lot of correct answers by simply guessing rather than carrying out elaborate derivations to arrive at the correct answer. For more information, we refer the readers to the full example in Table \ref{tab:imo-incorrect-answers-examples}.
+
+
+\subsubsection{Commonly Missed Easy Problems}
+
+Among many problems that models were not able to solve, we present here the following two pre-IMO difficulty problems from ProofBench-basic.
+
+\begin{problemexample}
+%[frametitle=Commonly missed easy example problem 1]
+    \textbf{PB-Basic-008, (Modified) All-Russia MO 2002}: Let $a,b,c$ be positive reals such that $a+b+c = 1$, prove that $\sqrt{a}+\sqrt{b}+\sqrt{c} \geq 3\sqrt{3}(ab+bc+ca)$.
+\end{problemexample}
+
+This problem is a standard symmetric homogeneous inequality in three variables, whose equality condition is $a=b=c$. This is one of the easiest type of inequalities one could encounter in a high school level math competition. However, not a single model we tested got even a partial score on this one.
+
+\begin{problemexample}
+%[frametitle=Commonly missed easy example problem 2]
+    \textbf{PB-Basic-016, (Modified) USAMO 1994 Problem 2}: 101 stones are arranged in a circle, numbered 1 through 101 in order (so that stone 1 is next to stone 101). Each stone is painted either red, white, or blue. Initially, stone 101 is the only blue stone. Among the remaining stones, even-numbered stones are red, and odd-numbered stones are white. We perform a sequence of modifications to the coloring, where in each step, we may choose a stone and repaint it a different color, as long as we ensure that no two adjacent stones are ever the same color. Prove that it is not possible to eventually reach a state where again stone 101 is the only blue stone, but among the remaining stones, all even-numbered stones are white and all odd-numbered stones are red.
+\end{problemexample}
+
+This is a standard, easy combinatorics problem that uses the invariance principle. One is required to test various quantities related to the problem, and find an invariant quantity to solve the problem. In this case, the difference between the number of blue followed by white and the number of white followed by blue is invariant. However, no model found any invariant that is related to the problem.
+
+
+\subsection{Query prompt for \pgs{}} \label{subsec:autograder-prompt}
+The following prompt was used to query \pg{} for \ipb{}
+\begin{quote}
+\ttfamily % Use a monospaced font for the entire prompt
+
+You are an expert grader for the International Mathematics Olympiad (IMO). Your task is to evaluate a proposed solution strictly and rigorously. Keep in mind the standards at the IMO are extremely high: only arguments that are logically sound, complete, and precise should be rewarded.
+
+\medskip
+\noindent\textbf{\#\#\# General Scoring Rubric} \\
+Scores are assigned on a 0-7 scale. The general guidelines are:
+\begin{itemize}[label=*, leftmargin=*, nosep]
+    \item \textbf{**7 Points (Correct):**} The solution is complete, correct, and fully rigorous. If the submission contains incorrect attempts or lines of reasoning but ultimately presents a complete and correct solution, it should still be awarded full points; the presence of earlier, discarded work does not detract from the final correct proof.
+    \item \textbf{**6 Points (Almost Correct):**} The solution is almost correct with a sound core argument, but contains minor errors in calculation or small gaps in logic. Missing proofs for major components, unjustified claims, or sketchy arguments are \textbf{**not**} eligible for 6 points.
+    \item \textbf{**1 Point (Partial Progress):**} The solution demonstrates substantial progress explicitly mentioned in the grading guidelines. Initial observations, reformulating the problem without making substantive headway, or proving partial results not mentioned in the grading guidelines are generally \textbf{**not**} eligible for this score.
+    \item \textbf{**0 Points (Incorrect):**} The solution doesn't make substantial progress that is a key step in the full solution or is fundamentally flawed. All partial progress without key results or lacking rigor also fall in this category.
+\end{itemize}
+
+\medskip
+\noindent\textbf{\#\#\# Input Data and Interpretation} \\
+You are provided with the following:
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{**Problem Statement:**} The IMO problem.
+    \item \textbf{**Ground Truth Solution:**} A reference solution. Assume this solution is correct. It demonstrates one valid approach.
+    \item \textbf{**Specific Grading Guidelines:**} Criteria for awarding credit for this specific problem. These guidelines take precedence over the General Scoring Rubric, especially for partial credit.
+    \item \textbf{**Proposed Solution:**} The student submission.
+\end{enumerate}
+
+\medskip
+\noindent\textbf{\#\#\# Evaluation Process} \\
+You must follow this structured process:
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{**Analyze References:**} Meticulously read and understand the problem and Ground Truth Solution check the Specific Grading Guidelines. Identify the key steps for a complete solution and the criteria for partial credit.
+    \item \textbf{**Step-by-Step Verification:**} Verify the logical validity and rigor of every step. Identify all flaws, gaps, assumptions, and errors. \textbf{**Make sure you fully understand every piece of logic behind each step of the proposed solution, you must be careful for solutions that 'pretend' to be correct.**}
+    \item \textbf{**Assess Progress:**} Determine the extent of non-trivial progress made.
+    \item \textbf{**Score Determination:**} Compare the findings against the Specific Grading Guidelines and the General Rubric to determine the final score.
+\end{enumerate}
+
+\medskip
+\noindent\textbf{\#\#\# Output Requirements} \\
+% CORRECTED LINE: Added the backtick ` before \texttt{<points>} to render the single quote.
+You must provide your final score in the format \texttt{<points>N out of 7</points>}. Ensure the `\texttt{<points>}` block is used \textbf{**only once**}, as your answer will be parsed based on the first \texttt{<points> </points>} block that appears in your whole response.
+
+\medskip\hrule\medskip
+
+\noindent\textbf{**PROBLEM STATEMENT**} \\
+\verb|{problem_statement}|
+
+\medskip
+\noindent\textbf{**GROUND-TRUTH SOLUTION**} \\
+\verb|{solution}|
+
+\medskip
+\noindent\textbf{**SPECIFIC GRADING GUIDELINES**} \\
+\verb|{guidelines}|
+
+\medskip
+\noindent\textbf{**PROPOSED SOLUTION**} \\
+\verb|{student_answer}|
+
+\medskip\hrule\medskip
+
+Present your detailed thought process and formal justification based on the scoring rubric and grading guidelines, and finally present your final score in the format below.
+
+\medskip
+\noindent{[Select one of the following options]}
+
+\begin{itemize}[label={}, leftmargin=*, nosep]
+    \item \texttt{<points>7 out of 7</points>}
+    \item \texttt{<points>6 out of 7</points>}
+    \item \texttt{<points>1 out of 7</points>}
+    \item \texttt{<points>0 out of 7</points>}
+\end{itemize}
+
+\end{quote}
+
+\subsection{Limitations of \pgs{}}
+\label{sec:proofgrader-limitations}
+\begin{table*}[tbh!]
+\centering
+\resizebox{\linewidth}{!}{%
+% Changed to a three-column layout
+\begin{tabular}{p{5cm}|p{15cm}}
+\toprule
+% Added "Source" header and corrected "originial" to "Original"
+\textbf{Problem} & \textbf{Model Solution and Grade} \\
+\midrule
+% Added empty row for P1
+\textbf{PB-Basic 002}: 
+
+Show that $x^2 + y^2 + z^2 + t^2 \ge xyzt$ for any positive real numbers $x, y, z, t$ that satisfy $2(x + y + z + t) \ge xyzt$.
+& 
+\textbf{Model Solution}: Of course. This is a great problem that elegantly combines a given condition with a target inequality. The key is to use the given condition to constrain the value of the product $xyzt$.
+
+Here is the step-by-step proof.
+
+**Step 1: Use the given condition and the AM-GM inequality to find a bound for the product $xyzt$.**
+
+We are given two pieces of information for positive real numbers $x, y, z, t$:
+1.  The condition: $2(x + y + z + t) \ge xyzt$
+2.  The inequality to prove: $x^2 + y^2 + z^2 + t^2 \ge xyzt$
+
+Let's start with the Arithmetic Mean-Geometric Mean (AM-GM) inequality for the four numbers $x, y, z, t$:
+$$ \frac{x+y+z+t}{4} \ge \sqrt[4]{xyzt} $$
+Multiplying both sides by 4, we get:
+$$ x+y+z+t \ge 4\sqrt[4]{xyzt} $$
+Now, we can substitute this result into the given condition $2(x + y + z + t) \ge xyzt$:
+$$ 2(4\sqrt[4]{xyzt}) \ge xyzt $$
+$$ 8\sqrt[4]{xyzt} \ge xyzt $$
+
+$(\ldots)$
+
+\vspace{2mm}
+
+\textbf{Human Grade}:  \textbf{\textcolor{blue}{0 out of 7}}
+
+\vspace{2mm}
+
+\textbf{Autograder Verdict}: \#\#\# Step-by-Step Verification
+
+1.  **Step 1: Bounding the product `xyzt`**
+    *   The student starts with the given condition: $2(x + y + z + t) \ge xyzt$.
+    *   They correctly apply the AM-GM inequality to $x, y, z, t$: $x+y+z+t \ge 4\sqrt[4]{xyzt}$.
+    *   Substituting this into the given condition yields $2(4\sqrt[4]{xyzt}) \ge xyzt$, which simplifies to $8\sqrt[4]{xyzt} \ge xyzt$.
+
+\vspace{2mm}
+
+$(\ldots)$
+
+\vspace{2mm}
+
+The solution is complete, correct, and fully rigorous. It meets all the criteria for a perfect score according to the General Scoring Rubric. It does not contain any errors, minor or otherwise. The method is different from the provided ground truth solution (it's a direct proof rather than a proof by contradiction), but it is equally valid and elegant.
+
+<points>\textbf{\textcolor{red}{7 out of 7}}</points>
+\\
+\midrule
+\textbf{PB-Basic 027}:
+
+Given an acute triangle $ABC$, let $D$ and $E$ be the feet of
+ the altitudes from $B$ to $AC$ and $C$ to $AB$, respectively.
+ Let $E_{1}$ and $E_{2}$ be the reflections of $E$ with respect
+ to $AC$ and $BC$, respectively. If $X$ (not equal to $C$) is an
+ intersection point of the circumcircle of $\triangle CE_{1}E_{2}$
+ and $AC$, and $O$ is the circumcenter of $\triangle CE_{1}E_{2}$,
+ prove that $XO$ is perpendicular to $DE$.
+&
+\textbf{Model Solution}: 
+Let $H$ be the orthocenter of triangle $ABC$. Let $H_a$ and $H_b$ be the reflections of $H$ about $AC$ and $BC$, respectively; then $H_a, H_b$ lie on the circumcircle $(ABC)$. Note that reflecting the line $CH$ about $AC$ gives the line $CH_a$, hence $E_1$ lies on $CH_a$; similarly $E_2$ lies on $CH_b$.
+
+\vspace{2mm}
+
+Key lemma (fixed tangent direction):
+
+Let $l = AC$, $r_1 = CH_a$, $r_2 = CH_b$. For any circle $\omega$ through $C$ intersecting $l, r_1, r_2$ again at $X, P, Q$ respectively, the angle between the tangent to $\omega$ at $X$ and $XC$ is constant (independent of the chosen $P \in r_1$ and $Q \in r_2$). Indeed, in the cyclic quadrilateral $XPCQ$ we have:
+\begin{itemize}
+    \item $\angle XCP = \angle(l, r_1)$ and $\angle XCQ = \angle(l, r_2)$, both constants;
+    \item $\angle XPC = \angle XQC$ (equal angles subtending chord $XC$);
+    \item hence $2\angle XPC + \angle XCP + \angle XCQ = 180^\circ$, so $\angle XPC = 90^\circ - (\angle(l, r_1)+\angle(l, r_2))/2$ is constant;
+    \item by the tangent--chord theorem, this $\angle XPC$ equals the angle between the tangent at $X$ and $XC$.
+\end{itemize}
+
+%--- commented out to save space
+% Apply this to the circle $\omega = (C E_1 E_2)$: here $P = E_1 \in r_1$ and $Q = E_2 \in r_2$, so the tangent at its intersection $X$ with $AC$ has that fixed direction. For the special choice $P = H_a$, $Q = H_b$, the circle is $(ABC)$ and $X = A$; thus the fixed direction is the direction of the tangent to $(ABC)$ at $A$. Therefore the tangent at $X$ to $(C E_1 E_2)$ is parallel to the tangent to $(ABC)$ at $A$.
+
+\vspace{2mm}
+
+($\ldots$)
+
+\vspace{2mm}
+
+\textbf{Human Grade}: \textbf{\textcolor{blue}{6 out of 7}}
+
+\vspace{2mm}
+
+\textbf{Autograder Verdict}:
+
+($\ldots$)
+
+\#\#\# Assessment and Score Determination
+
+The solution's overall structure is elegant, but it hinges entirely on a "Key Lemma" which is false and whose proof is invalid. The argument is fundamentally flawed.
+
+<points>\textbf{\textcolor{red}{0 out of 7}}</points>
+\\
+\bottomrule
+\end{tabular}%
+}
+% Updated the caption to be more general
+\caption{Examples of failure cases of \pg{}.}
+\label{tab:proofgrader-bias-examples}
+\end{table*}
+
+Despite a high correlation with human grades, \pg{} still has several systematic errors and limitations, including a general tendency to overestimate scores, occasional failure to identify high-level logical errors, and being prone to be overly punitive for minor formatting issues or unconventional yet correct solutions. We demontrate specific examples of these behavior in Table \ref{tab:proofgrader-bias-examples}.  
+
+In PB-Basic 002, the model solution makes a logical error by asserting $ 2(4\sqrt[4]{xyzt}) \ge xyzt $ directly from $ x+y+z+t \ge 4\sqrt[4]{xyzt} $ and $2(x + y + z + t) \ge xyzt $. This comes from an incorrect assumption that if $A \ge B$ and $A \ge C$, then $B \ge C$. Such "specious" errors, while seemingly plausible and easy to overlook without a deep understanding of the problem, are critical and can invalidate an entire solution. \pg{} often fails to identify such deceptive logical inconsistencies.
+
+In PB-Basic 027, the model produces a novel solution entirely different from the established ground truth and grading guidelines. The solution was largely correct, but its 'Key Lemma' omits a critical condition that the segment $PQ$ must have a fixed slope. While the lemma is false as stated, supplying this condition makes its proof an immediate consequence of homothety. Since the rest of the solution is complete, the human grader awarded it 6 out of 7 points. However, because the lemma is technically incorrect, \pg{} marks the entire solution as wrong. This case demonstrates that \pg{} struggles to identify partial progress in solutions not anticipated by the grading guidelines, leading to overly punitive assessments for minor issues.
+
+\section{\igbs{}}
+\subsection{Grade distribution for \igbs{}}
+\label{sec:grade_distribution}
+
+
+\begin{figure*}[tbh!]
+    \centering
+    \resizebox{\linewidth}{!}{%
+    \includegraphics{full_difficulty_chart.png}
+    }
+    \caption{Grade distribution across examples in \igb{}}
+    \label{fig:full-difficulty}
+\end{figure*}
+
+This section presents the human-assigned grade distribution for the \igb{} benchmark. As shown in Figure~\ref{fig:full-difficulty}, the aggregate count of correct versus incorrect grades across the entire dataset is balanced.
+
+However, the distribution of grades (correct, almost, partial, incorrect) is not uniform on a per-problem basis. This variance is expected as it reflects the natural distribution of scores that proof- evaluation models will encounter in grading solutions, as problems inherently differ in difficulty.
+
+\subsection{Query Prompt} % for \igbs{}}
+\label{app:grading_prompts}
+
+This section details the prompts used for the three evaluation settings in \igb{}. A common definition of the scoring criteria is used across all settings, inserted into the prompts as indicated by \texttt{\{SCORING\_CRITERIA\}}.
+
+
+\subsection{Grader Prompt}
+The following prompt was used for the vanilla setting:
+\begin{quote}
+Carefully analyze the given problem statement and the proposed solution, and
+then write out your analysis regarding the correctness of the proposed solution.
+
+After the analysis, you must provide a score based on the following criteria:
+
+\begin{itemize}
+    \item \textbf{incorrect:} The solution is completely incorrect or irrelevant.
+    \item \textbf{partial:} The solution is partially correct but has significant errors or omissions.
+    \item \textbf{almost:} The solution is almost correct but contains minor errors or inaccuracies.
+    \item \textbf{correct:} The solution is fully correct and complete.
+\end{itemize}
+
+The very last part of your response must be \textbf{only} one of the following words: incorrect, partial, almost, or correct.
+
+\verb|Problem:{problem}|
+\verb|Solution:{solution}|
+
+\end{quote}
+
+
+% \subsubsection{Setting: +gt solution}
+% The following prompt was used for the setting with a ground-truth solution:
+% \begin{quote}
+% Carefully analyze the given problem statement, the proposed solution and the
+% ground-truth solution. Next, write out your analysis regarding the correctness of the proposed solution.
+
+% \texttt{\{SCORING\_CRITERIA\}}
+
+% \verb|Problem:{problem}|
+% \verb|Solution:{solution}|
+% \verb|Ground-truth solution:{gt_sol}|
+
+% \end{quote}
+
+% \subsubsection{Setting: +gt solution \& grading guidelines}
+% The following prompt was used for the setting with a ground-truth solution and grading guidelines:
+% \begin{quote}
+% Carefully analyze the given problem statement, the proposed solution, the
+% grading guidelines, and the ground-truth solution. These guidelines outline
+% some of the essential requirements to achieve a score category
+% (e.g., what specific achievement merits a
+% 'partial' score, or what kind of flaw keeps a solution at 'almost' correct).
+% Next, write out your analysis regarding correctness of
+% the proposed solution.
+
+% \texttt{\{SCORING\_CRITERIA\}}
+
+% \verb|Problem:{problem}|
+% \verb|Solution:{solution}|
+% \verb|Ground-truth solution:{gt_sol}|
+% \verb|Grading guidelines:{guidelines}|
+
+% \end{quote}
+
+\subsection{Label extraction prompt} % for \igbs{}}
+\label{app:grading_extracting_prompt}
+The following prompt was used to extract the label from model response for \igb{}. Note that in the majority of cases, the last word of the model (grader) response is one of incorrect, partial, almost, or correct. As a result, we first use python to extract the model grades. We only use prompting to extract the model grades when the last word in the model response is empty or is some different words.
+
+% \begin{quote}
+% \#\# Instructions for Extracting Final Scores
+
+% **Objective:** Given an response of an evaluation prompt, extract the final score presented within the response and format it specifically.
+
+% **Process:**
+
+% 1.  **Analyze the response:** Scan the response to identify the final score provided by the evaluator.
+% 2.  **Extract and format the final answer:** Present the extracted score on a new line, preceded exactly by "Final answer: ".
+
+% **Formatting Rules:**
+
+% *   **Evaluation Categories:** The expected output must be one of the following categories: `correct`, `partial`, `almost`, `incorrect`, or `not found`.
+% *   **Score Identification:** The extraction is based on identifying the keyword used by the evaluator to summarize their conclusion. The criteria associated with these keywords are:
+%     *   **incorrect:** The evaluator concluded that the solution is completely incorrect or irrelevant.
+%     *   **partial:** The evaluator concluded that the solution is partially correct but has significant errors or omissions.
+%     *   **almost:** The evaluator concluded that the solution is almost correct but contains minor errors or inaccuracies.
+%     *   **correct:** The evaluator concluded that the solution is fully correct and complete.
+%     *   **not\_found:** The evaluation response does not clearly contain one of the four explicit scores listed above.
+
+% *   **Extraction:** Determine the provided score from the response and extract the category (`correct`, `partial`, `almost`, or `incorrect`). If a score cannot be reliably identified within the text, the output must be `not\_found`.
+
+% **Note:** No additional markings or explanations are needed beyond "Final answer: " and the extracted answer.
+
+% Below is the response:
+
+% \verb|{Model Response}|
+% \end{quote}
+
+\begin{quote}
+\ttfamily % Use a monospaced font for the entire prompt
+
+\noindent\textbf{\#\# Instructions for Extracting Final Scores}
+
+\medskip
+\noindent\textbf{**Objective:**} Given an response of an evaluation prompt, extract the final score presented within the response and format it specifically.
+
+\medskip
+\noindent\textbf{**Process:**}
+\begin{enumerate}[leftmargin=*, nosep]
+    \item \textbf{**Analyze the response:**} Scan the response to identify the final score provided by the evaluator.
+    \item \textbf{**Extract and format the final answer:**} Present the extracted score on a new line, preceded exactly by "Final answer: ".
+\end{enumerate}
+
+\medskip
+\noindent\textbf{**Formatting Rules:**}
+\begin{itemize}[label=*, leftmargin=*, nosep, itemsep=2pt]
+    \item \textbf{**Evaluation Categories:**} The expected output must be one of the following categories: `correct`, `partial`, `almost`, `incorrect`, or `not found`.
+    \item \textbf{**Score Identification:**} The extraction is based on identifying the keyword used by the evaluator to summarize their conclusion. The criteria associated with these keywords are:
+        % Nested list for the sub-criteria
+        \begin{itemize}[label=*, leftmargin=*, nosep, topsep=2pt]
+            \item \textbf{**incorrect:**} The evaluator concluded that the solution is completely incorrect or irrelevant.
+            \item \textbf{**partial:**} The evaluator concluded that the solution is partially correct but has significant errors or omissions.
+            \item \textbf{**almost:**} The evaluator concluded that the solution is almost correct but contains minor errors or inaccuracies.
+            \item \textbf{**correct:**} The evaluator concluded that the solution is fully correct and complete.
+            \item \textbf{**not\_found:**} The evaluation response does not clearly contain one of the four explicit scores listed above.
+        \end{itemize}
+    \item \textbf{**Extraction:**} Determine the provided score from the response and extract the category (`correct`, `partial`, `almost`, or `incorrect`). If a score cannot be reliably identified within the text, the output must be `not\_found`.
+\end{itemize}
+
+\medskip
+\noindent\textbf{**Note:**} No additional markings or explanations are needed beyond "Final answer: " and the extracted answer.
+
+\medskip
+Below is the response:
+
+\verb|{Model Response}|
+\end{quote}

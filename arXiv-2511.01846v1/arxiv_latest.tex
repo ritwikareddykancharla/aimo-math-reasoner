@@ -1,0 +1,490 @@
+\documentclass[11pt, a4paper, logo, twocolumn, copyright]{googledeepmind}
+
+\usepackage[authoryear, sort&compress, round]{natbib}
+\usepackage{multicol}
+\usepackage{multirow}
+\usepackage{subcaption}
+\usepackage{tablefootnote}
+\usepackage{listings}
+\usepackage{tcolorbox}
+
+% \definecolor{lightgray}{gray}{0.93}
+\newcommand{\code}[1]{\hl{\texttt{#1}}}
+\renewcommand{\cite}[1]{\citep{#1}}
+
+% macros
+\newcommand{\ib}{{\it IMO-Bench}}
+\newcommand{\iab}{{\it IMO-AnswerBench}}
+\newcommand{\ipb}{{\it IMO-ProofBench}}
+\newcommand{\igb}{{\it IMO-GradingBench}}
+\newcommand{\ibs}{IMO-Bench}
+\newcommand{\iabs}{IMO-AnswerBench} % IAB simple
+\newcommand{\ipbs}{IMO-ProofBench} % IPB simple
+\newcommand{\igbs}{IMO-GradingBench} % IGB simple
+\newcommand{\ag}{{\it AnswerAutoGrader}}
+\newcommand{\pg}{{\it ProofAutoGrader}}
+\newcommand{\ags}{{AnswerAutoGrader}}
+\newcommand{\pgs}{{ProofAutoGrader}}
+\newcommand{\iabperf}{80\%} % max performances on IAB
+\newcommand{\iabperflow}{22\%}
+\newcommand{\ipbperf}{77\%} % max performances on IPB for both basic and advanced sets
+\newcommand{\ipbperfb}{89\%} % max performances on IPB - basic set
+\newcommand{\ipbperfa}{66\%} % max performances on IPB - advanced set
+\newcommand{\claude}{Claude 3.5 Sonnet}
+\newcommand{\geminif}{Gemini 2.0 Flash}
+\newcommand{\geminift}{Gemini 2.0 Flash Thinking}
+\newcommand{\othreemini}{o3-mini (high reasoning)}
+\newcommand{\opus}{Claude Opus 4} % Claude Opus 4 20250514
+\newcommand{\deepseekv}{DeepSeek V3}
+\newcommand{\deepseekr}{DeepSeek R1}
+\newcommand{\kimi}{Kimi-K2-Instruct} % moonshotai/Kimi-K2-Instruct
+\newcommand{\sonnet}{Claude Sonnet 4}
+\newcommand{\qwen}{Qwen3-235B} % Qwen/Qwen3-235B-A22B-Instruct-2507-tput
+\newcommand{\ofourmini}{o4-mini ({\it high reasoning})}
+\newcommand{\grok}{Grok 4} %Grok 4 0709
+\newcommand{\gemini}{Gemini 2.5 Pro}
+\newcommand{\othree}{o3} % o3-20250416
+\newcommand{\gpt}{GPT-5} % GPT-5-2025-08-07
+\newcommand{\grokh}{Grok 4 ({\it heavy})}
+\newcommand{\linyang}{Gemini 2.5 Pro with (Huang \& Yang, 2025)}
+\newcommand{\deepthink}{Gemini 2.5 Deep Think}
+\newcommand{\aero}{Gemini Deep Think ({\it IMO Gold})}
+\newcommand{\imogold}{IMO-gold}
+\newcommand{\gss}{{\it Grading} Skill Score}
+\newcommand{\todo}[1]{\textcolor{red}{#1}}
+
+% --- problem environment
+\usepackage{soul}
+% \usepackage[framemethod=default]{mdframed}
+
+\definecolor{ZSBaseline}{HTML}{ff8d13}
+\definecolor{KDBaseline}{HTML}{bd00ff}
+\definecolor{DABaseline}{HTML}{2782ed}
+\definecolor{OurColor}{HTML}{36aa70}
+\definecolor{ExampleBg}{HTML}{ffffff}
+\definecolor{ExampleTitle}{HTML}{545f7f}
+\newmdenv[
+    roundcorner=5pt,
+    backgroundcolor=ExampleBg,
+    linecolor=ExampleTitle,
+    outerlinewidth=0.5pt,
+    frametitlebackgroundcolor=ExampleTitle,
+    frametitlefont={\bfseries\color{white}},
+    nobreak=true,  % remove this if you want to allow breaking across columns, but i thought it was pretty messy
+]{problemexample}
+
+\AtBeginEnvironment{problemexample}{\setlength{\parindent}{0pt}}
+
+
+\bibliographystyle{abbrvnat}
+
+\title{Towards Robust Mathematical Reasoning}
+
+% \keywords{Robust evaluation, benchmarks, International Math Olympiad, Gold, Gemini Deep Think.}
+
+\author{
+ Thang Luong\textsuperscript{$\diamond$},
+ Dawsen Hwang\textsuperscript{*},
+ Hoang H. Nguyen\textsuperscript{*$\dagger$},
+ Golnaz Ghiasi\textsuperscript{*},
+ Yuri Chervonyi\textsuperscript{*},
+ Insuk Seo\textsuperscript{*$\dagger$},
+ Junsu Kim\textsuperscript{*},
+ Garrett Bingham,
+ Jonathan Lee,
+ Swaroop Mishra\textsuperscript{$\dagger$},
+ Alex Zhai,
+ Clara Huiyi Hu,
+ Henryk Michalewski, Jimin Kim\textsuperscript{$\dagger$},
+ Jeonghyun Ahn\textsuperscript{$\dagger$},
+ Junhwi Bae\textsuperscript{$\dagger$},
+ Xingyou Song,
+ Trieu H. Trinh,
+ Quoc V. Le,
+ Junehyuk Jung\textsuperscript{$\diamond$}
+\\
+ \textsuperscript{$\diamond$}Corresponding authors, \textsuperscript{*}Core and equal contributors, 
+ \textsuperscript{$\dagger$}Work previously conducted under Google DeepMind
+}
+\correspondingauthor{thangluong@google.com, junehuyk@google.com \newline External affiliations: Georgia Institute of Technology (Hoang Nguyen), Seoul National University (Insuk Seo, Junsu Kim, Jimin Kim), Microsoft (Swaroop Mishra), Massachusetts Institute of Technology (Jeonghyun Ahn, Junhwi Bae), Brown University (Junehyuk Jung).}
+
+\begin{abstract}
+\footnotesize
+Finding the right north-star metrics is highly critical for advancing the mathematical reasoning capabilities of foundation models, especially given that existing evaluations are either too easy or only focus on getting correct short answers. To address these issues, we present \ib{}, a suite of advanced reasoning benchmarks, vetted by a panel of top specialists and that specifically targets the level of the International Mathematical Olympiad (IMO), the most prestigious venue for young mathematicians. \iab{} first tests models on 400 diverse Olympiad problems with verifiable short answers. \ipb{} is the next-level evaluation for proof-writing capabilities, which includes both basic and advanced IMO level problems as well as detailed grading guidelines to facilitate automatic grading. These benchmarks played a crucial role in our historic achievement of the gold-level performance at IMO 2025 with Gemini Deep Think~\cite{imo-gold}. Our model achieved 80.0\% on \iabs{} and 65.7\% on the advanced \ipbs{}, surpassing the best non-Gemini models by large margins of 6.9\% and 42.4\% respectively. We also showed that autograders built with Gemini reasoning correlate well with human evaluations and construct \igb{}, with 1000 human gradings on proofs, to enable further progress in automatic evaluation of long-form answers. We hope that \ib{} will help the community towards advancing robust mathematical reasoning and release it at {\footnotesize \url{https://imobench.github.io}}.
+\end{abstract}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+The field of artificial intelligence, particularly large language or foundation models, has demonstrated remarkable progress in mathematical reasoning capabilities.  Many popular benchmarks such as GSM8K \cite{2110.14168}, 
+% Hendrycks' 
+MATH \cite{2103.03874}, and the recently popular AIME
+% (American Invitational Mathematics Examination)
+have approached saturation, limiting their usefulness in differentiating model performances. The problems in these datasets often rely on a limited set of techniques and do not always require the deep, multi-step reasoning needed to truly evaluate AI mathematical reasoning.  Indeed, relying on final answer matching, even in recent benchmarks such as FrontierMath \cite{glazer2024frontiermath} and Humanity's Last Exam \cite{phan2025humanity}, is not entirely reliable.  It could lead to AI systems that are good at guessing answers but do not exhibit robust reasoning.
+%skills.
+
+\begin{figure}[hbt!]
+    \centering
+    \includegraphics[width=\linewidth]{Main-Plot.png}
+    \caption{
+    \ipb{}, a benchmark in \ib{}, for measuring proof-writing capabilities. 
+        We demonstrated high correlations between human and automatic evaluations on a variety of public models, including our IMO-gold model.
+        See $\S$\ref{sec:proofbench} and $\S$\ref{subsec:ipb-autograder} for more details.}
+    \vspace{-5mm}
+    \label{fig:autograder_external}
+\end{figure}
+
+To address these shortcomings, we propose \ib{}, a suite of benchmarks that focus on robust reasoning at the level of the International Mathematical Olympiad (IMO), the world's most celebrated arena for young mathematicians. The IMO is selected due to its notoriously difficult problems, which require not only rigorous multi-step reasoning but also a high degree of novelty, going beyond the simple application of known formulas. Such characteristics make IMO an excellent testbed for assessing reasoning capability. \ib{} covers three different tasks as summarized in Table~\ref{tab:imo_bench} and all problems were vetted by a panel of IMO medalists\footnote{Together, they won 10 gold and 5 silver IMO medals.} and mathematicians.
+\begin{table}[tbh!]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrl}
+\toprule
+\textbf{Benchmark} & \textbf{Size} & \textbf{Task} \\
+\midrule
+\iab{} & 400 & Get the right answer \\
+\ipb{} & 60 & Write a rigorous proof \\
+\igb{} & 1000 & Grade a proof \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Benchmarks in the \ib{} suite.
+}
+\label{tab:imo_bench}
+\end{table}
+
+
+\begin{figure*}[tbh!]
+    \centering
+    \resizebox{\linewidth}{!}{%
+    \includegraphics{subcategory_distribution.png}
+    }
+    \caption{Topic distribution by category in \iab{}. Number Theory and Combinatorics have the most topics which reflect the broad knowledge required to solve these problems while Geometry is mostly skewed towards angle and sidelength computation problems due to the nature of the short answer benchmark.}
+    \label{fig:subcategories}
+\end{figure*}
+
+The first benchmark,
+\iab{}, consists of 400 problems with verifiable answers carefully chosen from past Olympiad competitions and then altered by experts to avoid memorization.
+Problems were chosen from a variety of topics whose solutions require different problem solving techniques to ensure a diverse representation of topics, ideas, and domain knowledge as illustrated in Figure~\ref{fig:subcategories}.
+
+The second benchmark, \ipb{}, consists of 60 problems of varying difficulty levels, similar to those found at the IMO. While some problems have short answers, all require models to generate complete proofs. The benchmark is divided into two subsets, {\it basic} and {\it advanced}, each with 30 problems. While the basic set covers difficulty levels from pre-IMO up to IMO-Medium, problems in the advanced set are up to IMO-hard level and consist of 5 complete IMO sets, 3 of which are novel. We designed this benchmark to steer the community's focus from final answers to proofs, enabling a more rigorous assessment of AI reasoning processes. To ensure consistent evaluation, we include detailed grading schemes suitable for both human experts and automated systems. Figure~\ref{fig:autograder_external} provides an early look into the potential of automatic graders for proofs.
+
+
+These two benchmarks played a crucial role in the development of our Gemini Deep Think, leading to the historic achievement of the gold-level performance at IMO 2025~\cite{imo-gold}. 
+Our \imogold{} model achieved an accuracy of 80.0\% on \iabs{} by automatic evaluation, surpassing the best non-Gemini model and the best open-weight model by a large margin of 6.9\% and 19.2\% respectively. The advanced \ipbs{} is much more challenging. Our \imogold{} model scored 65.7\%, whereas the best non-Gemini and the best open-weight models performed poorly with only 23.3\% and 7.1\% accuracy according to human evaluations. Furthermore, we demonstrate that automated graders for both answers and proofs, built upon \gemini{}, achieve high correlation with expert human evaluations.
+
+Last but not least, we introduce \igb{}, a benchmark of 1000 solutions to problems in the advanced \ipbs{}, together with grades from human experts. This resource is designed to foster progress in the automatic evaluation of long-form answers.
+We release
+% \footnote{\url{imobench.github.io}}
+\ib{} to the community and hope that it will spur further research towards advancing robust mathematical reasoning.
+
+
+\section{\iabs{}}
+
+\subsection{Problem Selection}
+400 math problems were handpicked from various national, regional, and international  Olympiad contests, spanning across  four categories ({\it Algebra, Combinatorics, Geometry, Number Theory}). For each category, the benchmark contains 100 problems across four levels of difficulty: {\it pre-IMO} (middle school or pre-Math Olympiad problems), {\it IMO-Easy} (equivalent to Problem 1 or Problem 4 at the IMO), {\it IMO-Medium} (equivalent to Problem 2 or Problem 5 at the IMO) and {\it IMO-Hard} (equivalent to Problem 3 or Problem 6 at the IMO or post-Math Olympiad problems).  The difficulty breakdown for each category is listed in Table \ref{tab:difficulty}. 
+
+\begin{table}[tbh!]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Category} & \textbf{Pre-IMO} & \textbf{IMO-Easy} & \textbf{IMO-Medium} & \textbf{IMO-Hard} \\
+\midrule
+Algebra & 11 & 46 & 32 & 11 \\
+Combinatorics & 4 & 19 & 31 & 46 \\
+Geometry & 13 & 44 & 32 & 11 \\
+Number Theory & 2 & 20 & 31 & 47 \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Difficulty statistics for \iab{}.}
+\label{tab:difficulty}
+\end{table}
+
+
+Problems with short answers were chosen so the correctness of a model's output can be quickly and reliably determined.  Given the proof-heavy nature of many math Olympiad problems, we perform an additional reformulation step for certain examples. This adjustment ensures that each problem yields a clear and nontrivial short answer, thereby reducing ambiguity during solving and verification and confirming that models utilize nontrivial reasoning. See further details in \ref{sec:consistent-eval}.
+
+\subsection{Problem Robustification}
+To avoid data memorization,
+an additional step of problem modification is done via paraphrasing, changing the name of objects in the problem (such as changing point names for geometry problems), reformulating, modifying numerical values and/or adding distractors to the problem. This process is done either manually or automatically using language models. We highlight some examples in Table~\ref{tab:imo-answer-bench-examples} and detail below.
+
+One example is an algebra problem from Austria Math Olympiad 2017. The problem is modified by making the substitution $x=a + b - c ,~ y = b + c - a$, and $z = c + a - b$ for positive real numbers $x,y,z$ with $a,~b$, and $c$ being the lengths of the sides of some triangle to obtain the modified problem in the {\it Robustified} column. This modification uses the knowledge that $a$, $b$, and $c$ are lengths of a triangle if and only if they satisfy the triangle inequalities $a+b>c$, $a+c>b$, and $b+c>a$. 
+
+Another example is a combinatorics problem from USA TST 2005. From the original statement, the problem is modified using several techniques such as modifying numerical values (by assigning a specific value to the variable $n$ so that it is harder to guess the pattern), adding distractors (by introducing a function or variables that are not relevant to the problem), and adding a layer of challenge that could confuse the models.
+
+Experts also reformulated original problems into equivalent ones with completely different expressions. One such example is the Czech-Slovak Math Olympiad 2017 problem. We obtained a robustified problem by transforming the governing equation and changing the objective from finding all possible values of $k$ to finding all even integers $d$ such that the number of solutions is even.
+
+\subsection{Answer autograder} 
+Even for the problems with short answers, automatic answer verification presents a few substantial challenges. The difficulty arises from two main issues: (1) ensuring that model outputs adhere to a parsable format and (2) evaluating semantically equivalent but syntactically different expressions.\footnote{For example, given the ground truth answer "$(-\infty, -4) \cup (-4, \infty)$", the answer "all real numbers except -4" should also be graded as correct.} To circumvent this issue, benchmarks such as FrontierMath \cite{glazer2024frontiermath} select problems with only numerical answers or mathematical objects that can be expressed as SymPy objects. However, this approach narrows the scope of evaluable problems and reduces robustness of the benchmark to minor formatting or syntax errors.
+
+To address these limitations, we use large language models as automated verifiers for model answers on \iab{}. We name this approach, \ag{}, which is built by prompting the public \gemini{} model to extract final answers from generated solutions and assess their correctness against ground truths (See \ref{subsec:answergrader-prompt} for the full prompt). This method allows much more flexibility in acceptable answer formats and improves the overall robustness of our benchmark. As we demonstrate in Section~\ref{subsec:iab-automatic-eval}, \ag's performance is nearly identical to that of human evaluators, validating its use for future public usage and also for reporting the results in this work.
+
+\section{Going Beyond Short Answers with \ipbs{}}
+\label{sec:proofbench}
+While the final answer accuracy provided by \iab{} offers a valuable metric for measuring mathematical abilities, it is insufficient for a comprehensive assessment of mathematical reasoning.  A final answer can be correct while the full solution contains flawed reasoning. Furthermore, many IMO-level competition problems do not come with a final short answer. Even in cases where a short answer exists, guessing the correct short answer is often significantly easier than rigorously deriving the solution.
+
+\ipb{} is designed to evaluate the ability of AI models to construct comprehensive and valid mathematical arguments. This benchmark consists of 60 proof-based problems, curated to mirror the kinds of problems found in the IMO. While some problems may have concise numerical answers, models are only given credit if they produce correct and relevant reasoning steps. This benchmark is essential for assessing an AI's underlying reasoning process, its ability to apply mathematical principles, and its capacity to formulate coherent and logical arguments.  
+
+\subsection{Benchmark setup}
+The benchmark is divided into two subsets: a \textit{basic} set covering pre-IMO to IMO-Medium difficulty levels, and an \textit{advanced} set featuring novel, highly challenging problems simulating complete IMO examinations, up to IMO-Hard level.
+
+The basic problem set primarily consists of rephrased versions of existing problems. Since standard IMO problems may be too challenging for most of current models, the basic set is designed to assess models in their early stages of development.  Sufficiently strong performance on the basic set would justify progression to the advanced set.
+The advanced problem set features 30 problems in the style and difficulty of the IMO. The collection includes 18 novel problems crafted by IMO medalists, alongside 12 problems from recent top-tier competitions: 6 robustified from IMO 2024 and 6 directly from USAMO 2025. Table~\ref{tab:imo2024-robustified-example} provides examples of such robustified problems.
+
+\ipb{} uses an evaluation framework designed for both simplicity and precision. We provide a primary grading guideline with four ratings ({\it Correct, Almost, Partial, Incorrect}) as detailed in Table~\ref{tab:imo_ratings}.
+While this rubric offers a clear and consistent baseline, we do not restrict our expert evaluators to these four values. To allow for more nuanced assessments, human experts are empowered to use their own judgments to assign any integer score from 0 to 7 for each problem.
+
+\begin{table}[tbh!]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lcl}
+\toprule
+\textbf{Category} & \textbf{IMO Points} & \textbf{Solution quality} \\
+\midrule
+Correct & 7 & Fully correct, rigorous, and complete \\
+Almost & 6 & Almost correct, minor errors \\
+Partial & 1 & Mostly incorrect, some relevant results \\
+Incorrect & 0 & Completely incorrect or irrelevant. \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Our simplified IMO ratings.}
+\label{tab:imo_ratings}
+\end{table}
+
+\subsection{Proof Autograder}\label{subsec:autorater}
+ While human expert evaluation remains the gold standard for mathematical proofs, its cost and time intensity limit scalable research. To address this, we built \pg{}, an automatic grader for  \ipb{}. The autograder leverages \gemini{}, providing it with a prompt containing the problem statement, the candidate solution, a reference solution, and specific grading guidelines (see Appendix \ref{subsec:autograder-prompt}).
+
+Automatic evaluation for informal proofs is a highly intricate task, and current systems are not yet a perfect substitute for human experts-a key distinction from \ag , whose purpose is primarily format matching. For this reason, all primary results in this paper are based on expert human evaluation to ensure all results are absolutely correct. Nevertheless, as we demonstrate in Section \ref{subsec:ipb-autograder}, we prove our autograder can be a reasonable proxy,  establishing it as a reasonable tool for the community to assess future models on \ipb{}.
+
+\section{\igbs{}}
+\label{sec:igb_methodology}
+
+\begin{table*}[tbh!]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{l|c|cccc|c}
+\toprule
+\textbf{Model} & \textbf{Query date} & \textbf{Algebra} & \textbf{Combinatorics} & \textbf{Geometry} & \textbf{Number Theory} & \textbf{Overall} \\
+\midrule
+\opus{} & 2025-08-04 & 19.4\% & 20.0\% & 23.3\% & 26.6\% & 22.3\% \\
+\sonnet{} & 2025-08-06 & 20.6\% & 17.8\% & 26.0\% & 27.6\% & 23.0\% \\
+\deepseekv{} & 2025-09-17 & 39.0\% & 26.0\%& 35.0\%& 48.0\%& 37.0\% \\
+\kimi{} & 2025-09-17 & 45.6\% & 31.1\% & 49.3\% & 56.9\% & 45.8\% \\
+\qwen{} & 2025-08-20 & 57.6\% & 37.5\% & 57.6\% & 62.3\% & 53.8\% \\
+\deepseekr{} & 2025-09-17 & 65.0\%& 40.0\%& 73.0\%& 65.0\%& 60.8\% \\
+\othree{} & 2025-08-04 & 62.8\% & 43.0\% & 70.6\% & 68.0\% & 61.1\% \\
+\gpt{} & 2025-09-17 & 69.9\%&  46.4\% & 74.8\% & 71.2\% & 65.6\% \\
+\ofourmini{} & 2025-08-04 & 71.3\% & 46.6\% & 78.4\% & 75.3\% & 67.9\% \\
+\gemini{} & 2025-08-04 & 73.4\% & 48.0\% & 74.3\% & 77.1\% & 68.2\% \\
+\deepthink{} & 2025-08-20 & 78.0\% & {49.0\%} & {83.0\%} & {77.0\%} & {71.8\%} \\
+\grok{} & 2025-08-06 & {75.5\%} & {55.9\%} & {80.1\%} & \textbf{80.9\%} & {73.1\%} \\
+\aero{} & 2025-09-17 & \textbf{85.0\%} & \textbf{69.0\%} & \textbf{88.0\%} & {78.0\%} & \textbf{80.0\%}\\
+\bottomrule
+\end{tabular}%
+}
+\caption{Model accuracy on \iab{}. Results are averaged over 8 runs, except for \deepthink{} and \aero{} (single run). An evaluation of \grokh{} on 2025-08-13 using multiple paid accounts was aborted due to significant instability (only 117/400 responses were received despite multiple, hour-long attempts), and thus its results are not reported.}
+\label{tab:imo-answer-bench-result}
+\end{table*}
+
+While \ipb{} evaluates proof-writing abilities, it is equally important to assess models in terms of their ability to evaluate the correctness of given solutions. This capability is crucial for developing reliable automated grading systems and improving general mathematical reasoning. 
+
+As part of our IMO effort~\cite{imo-gold}, we have benchmarked extensively many internal models on the advanced set of \ipb{} using human evaluations.
+% , which has been tremendously instrumental for our rapid progress leading up to IMO 2025.
+These human gradings led to the creation of \igb{} with 1000 examples, each containing a problem statement, a proposed solution, and its human-assigned grade (on a 0–7 scale). To reduce noise from fine-grained scoring, we frame the evaluation as a four-way classification by mapping the given IMO points to the labels ({\it Correct, Almost, Partial, Incorrect}) as detailed in Table~\ref{tab:imo_ratings}. 
+To ensure a robust evaluation, the dataset has been balanced with a roughly equal number of examples per category. Figure~\ref{fig:score-distribution-difficulty} illustrates that when problems are grouped by their IMO difficulties, a clear trend emerges. The proportion of correct and almost solutions decreases as the intended difficulty moves from IMO-easy to IMO-hard, while the proportion of incorrect and partial solutions increases. This confirms that the grading distribution of \igb{} aligns with its assigned difficulty levels. See further discussions in Section~\ref{sec:grade_distribution}.
+
+\begin{figure}[tbh!]
+    \centering
+    \resizebox{\columnwidth}{!}{%
+    \includegraphics{Score_distribution_by_diff_twocolumn.png}
+    }
+    \caption{Grade distribution for solutions in \igb{} by difficulty levels (IMO-Hard, IMO-Medium, IMO-Easy).}
+    \label{fig:score-distribution-difficulty}
+\end{figure}
+
+\section{Results}
+
+\begin{table}[tbh!]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\resizebox{0.9\linewidth}{!}{%
+\begin{tabular}{cc|cc}
+                               &   & \multicolumn{2}{c}{\textbf{\ag{}}} \\
+                               &   & \textbf{0}         & \textbf{1}        \\ \hline
+\multirow{2}{*}{\begin{tabular}{@{}c@{}}\textbf{Human}\\\textbf{Grade}\end{tabular}} & \textbf{0} & 274 {\footnotesize (99.6\%)} & 1 {\footnotesize (0.4\%)} \\
+                               & \textbf{1} & 8 {\footnotesize (1.5\%)}   & 517 {\footnotesize (98.5\%)} \\
+\end{tabular}
+}
+\caption{\ag{} predictions against human grades for \iab{}. 
+The solutions were generated by \gemini{} and \othree{}. 
+}
+\label{tab:answergrader-confusion-mat}
+\end{table}
+
+\begin{table*}
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{l|c|l|l|lcc}
+\toprule
+\multirow{2}{*}{\textbf{Model}} & \multirow{2}{*}{\textbf{Query date}} & \multicolumn{2}{c|}{\textbf{\ipbs{}}} & \multicolumn{3}{c}{\textbf{{\it Advanced} \ipbs{} Breakdown}} \\ 
+\cmidrule(lr){3-4} \cmidrule(lr){5-7} 
+& & \multicolumn{1}{c|}{\textit{Basic}} & \multicolumn{1}{c|}{\textit{Advanced}} & \multicolumn{1}{c|}{\textit{Novel}} &\multicolumn{1}{c|}{ \textit{IMO 2024$^\dagger$}} & \multicolumn{1}{c}{\textit{USAMO 2025}} \\
+\midrule
+\textbf{Number of Problems} &  & \multicolumn{1}{c|}{30} & \multicolumn{1}{c|}{30} & \multicolumn{1}{c|}{18} & \multicolumn{1}{c|}{6}& \multicolumn{1}{c}{6} \\
+\midrule
+\opus{} & 2025-08-04 &  11.9\%  & \hphantom{0}2.9\% &  \hphantom{0}0.0\% &  \hphantom{0}2.4\% & 11.9\%\\
+\deepseekv{} & 2025-09-16 &  18.6\% & \hphantom{0}4.3\% &  \hphantom{0}6.3\% &  \hphantom{0}2.4\% &  \hphantom{0}0.0\% \\  
+\kimi{} & 2025-08-21 & 19.5\% & \hphantom{0}7.1\% & \hphantom{0}4.0\% &  \hphantom{0}2.4\% & 21.4\% \\
+\sonnet{} & 2025-09-17 & 27.1\%$^{\S1}$ & \hphantom{0}4.8\%$^{\S1}$ &  \hphantom{0}6.4\%$^{\S1}$&  \hphantom{0}2.4\% &  \hphantom{0}2.4\% \\
+\deepseekr{} & 2025-09-16 &  29.0\% & \hphantom{0}3.8\% & \hphantom{0}6.4\% &  \hphantom{0}0.0\% &  \hphantom{0}0.0\% \\
+\qwen{} & 2025-08-21 & 33.3\% & \hphantom{0}5.2\% &  \hphantom{0}7.1\% &  \hphantom{0}0.0\% &  \hphantom{0}4.8\% \\
+\ofourmini{} & 2025-08-04 & 37.6\% & 11.4\% &  \hphantom{0}8.7\% &  \hphantom{0}7.1\% & 23.8\% \\
+\grok{} & 2025-08-20 & 46.7\% & 18.6\% & 17.5\% & 16.7\% & 23.8\% \\
+\othree{} & 2025-08-04 & 54.8\% & 20.5\%  & 15.1\% &  \hphantom{0}4.8\% & 52.4\% \\ 
+\gemini{} & 2025-08-04 & 55.2\% & 17.6\% & 15.9\% &  \hphantom{0}7.1\% & 33.3\% \\
+\gpt{} & 2025-09-18 & 59.0\% & 20.0\% & 15.9\% & 33.3\% & 19.0\%  \\
+\grokh{} & 2025-07-12  & \hphantom{0}{\it NA}$^\ddagger$ & 23.3\%$^{\S3}$  & 11.1\%$^{\S3}$ & \hphantom{0}7.1\% & \textbf{76.2\%} \\
+\linyang{} & 2025-07-14 & 69.5\% & 24.8\% & 17.5\% & 19.1\% & 52.4\% \\
+\deepthink{} & 2025-08-20 & 83.8\% & 37.6\% & 31.7\% & 40.5\% & 52.4\% \\
+\aero{} & 2025-08-02 & {\bf 89.0\%}  & {\bf 65.7\%}  & \textbf{61.1\%} & \textbf{76.2\%} & 69.0\% \\
+\bottomrule
+\end{tabular}%
+}
+\caption{
+Expert evaluation results on the Basic and Advanced subsets of \ipb{}. Scores are presented as a percentage of the total possible points for the problems in each respective subset, with each problem graded from 0--7 (as described in Section \ref{sec:proof_evaluation}). The Advanced \ipb{} is further broken down by problem source. 
+\\
+\small{\it $^\dagger$Robustified IMO 2024 problem set, see Section~\ref{sec:proofbench}. $^\ddagger$An attempt to query \grokh{} on 2025-08-13 was unsuccessful due to model instability (only 5 of 30 problems responded with 3 attempts). $^{\S k}$Scores indicate that there were $k$ problems that were treated as incorrect (a score of 0) because of query failures (for at least 3 times).}
+}
+\label{tab:imo-proof-bench-manual-result}
+\end{table*}
+
+
+We evaluate \ib{} on a wide variety of publicly available models: \opus{} (20250514), \sonnet{}~\cite{anthropic:2025:claude4}, \deepseekv{}~\cite{deepseek:2025:v3}, \deepseekr{}~\cite{deepseek:2025:r1}, \kimi{}~\cite{moonshotai:2025:kimik2}, \qwen{} (A22B-Instruct-2507- tput)~\cite{qwen:2025:qwen3}, \othree{} (2025-04-16), \ofourmini{}~\cite{openai:2025:o3ando4mini}, \gpt{} (2025-08-07)~\cite{openai:2025:gpt5}, \gemini{}~\cite{deepmind:gemini2p5po}, \deepthink{}~\cite{deepmind:gemini2p5deepthink}, \aero{}~\cite{imo-gold}, \linyang{}~\cite{huang2025gemini25procapable}, \grok{} (0709)~\cite{xai:grok4}.
+Since \linyang{} is an agentic framework rather than a single model call, Appendix \ref{appendix:linyang} contains further implementation details.
+
+\subsection{\iabs{} with \ags{}} \label{subsec:iab-automatic-eval}
+
+Results for \iab{} are summarized 
+in Table \ref{tab:imo-answer-bench-result}.  Accuracy was determined by \ag{}, which extracts final answers from model responses and assesses their semantic equivalence to the ground truths. Our \aero{} model achieved an overall accuracy of 80.0\%, surpassing the best non-Gemini model (\grok{}) by 6.9\% and the best open-weight model (\deepseekr{}) by 19.2\%. Latest models such as \kimi{} and \gpt{} are still struggling with overall accuracy of only 45.8\% and 65.6\% respectively. 
+
+Across the four categories of Algebra, Combinatorics, Geometry, and Number Theory, models generally perform the worst in Combinatorics, potentially highlighting difficulties with advanced abstract reasoning.
+We also analyze the performances of models on the original problems, before robustification, summarized in Table~\ref{tab:imo-answer-bench-original-result}.  As anticipated, we find robustification leads to a consistent drop in performance across all models.
+
+Lastly, we validate the reliability of \ag{} by comparing it with expert human labels. As reported in Table \ref{tab:answergrader-confusion-mat}, the autograder shows nearly perfect performance, achieving overall accuracy of 98.9\% on the positive (correct) class.
+
+
+\subsection{\ipbs{} with Expert Evaluations}
+
+Model outputs on \ipb{} were graded by human experts according to the guidelines described in Section \ref{sec:proof_evaluation}. Table \ref{tab:imo-proof-bench-manual-result} presents the results of this evaluation. Performance on the basic \ipb{} varies significantly; while most models score below 60\%, \aero{} achieves a high score of 89.0\%. The performances of other frontier models such as \qwen{} (33.3\%) and \gpt{} (59.0\%) show there is still considerable room for improvements.
+
+The advanced \ipb{} proves to be a more significant challenge that all non-Gemini models score below 25\%.
+Our \aero{} model achieved a score of 65.7\%, surpassing the best non-Gemini model (\grokh{}) by a large margin of 42.4\%. This represents a substantial leap in capability, but its distance from a perfect score indicates that even the strongest models have room for growth in sophisticated mathematical reasoning.
+
+A breakdown of the advanced \ipb{} reveals a significant performance disparity across problem types, suggesting potential overfitting in certain models. This trend is most evident with \grokh{}, which scores 76.2\% on USAMO 2025 but only 11.1\% on novel problems. Other models, including \othree{} (52.4\% vs. 15.1\%) and \linyang{} (52.4\% vs. 17.5\%), exhibit a similar, pronounced gap.
+In contrast, \aero{} scored 69.0\% on the USAMO and 61.1\% on the novel sets, indicating it has more general capabilities \cite{deepmind:gemini2p5deepthink} without overfitting to a particular dataset.
+The low performances of latest frontier models such as \gpt{} and \grokh{} on the advanced \ipb{} underscore the difficulty of advanced mathematical reasoning and highlight the importance of rigorous examination the full details of model outputs for a complete understanding of their mathematical abilities.
+
+\subsection{Autograder for \ipbs{}} \label{subsec:ipb-autograder}
+To assess the feasibility of using automatic graders for proofs, we apply \pg{} to the 14 public models (Table \ref{tab:imo-proof-bench-manual-result}), which were previously graded by human experts on \ipb{}.
+Figure~\ref{fig:autograder_external} shows that the average grades from \pg{} highly correlate with human grades, yielding high Pearson correlation coefficients of $0.96$ and $0.93$ on both basic and advanced problems respectively.
+
+% \vspace{-5mm}
+\begin{figure}[tbh!]
+    \centering
+    \resizebox{\linewidth}{!}{
+    \includegraphics{proofgrader_internal_scatterplot.png}
+    }
+    \caption{
+    Correlation between \pg{} and human experts on the advanced \ipb{}, evaluated over 170 internal models on our IMO-gold journey.
+    }
+    \label{fig:autograder}
+\end{figure}
+
+In addition, we also visualized, in Figure~\ref{fig:autograder}, the performance of \pg{} on 170 internal systems, developed as part of our IMO effort~\cite{imo-gold}. On this larger pool, our automatic grader  achieved a lower, but still reasonable Pearson correlation coefficient of $0.87$. 
+
+
+\begin{figure}[tbh!]
+    \centering
+    \resizebox{0.9\columnwidth}{!}{
+    \includegraphics{heatmap_public.png}
+    }
+    \caption{Confusion matrix for \pg{} vs. human expert grades, over 840 solutions generated by 14 public models (See Table~\ref{tab:imo-proof-bench-manual-result}).
+    }
+    \label{fig:autograder-confusion-mat}
+\end{figure}
+
+
+To better understand the grading agreement, we visualize, in Figure \ref{fig:autograder-confusion-mat}, the confusion matrix of all human and automatic gradings on the 14 public models (for a total of 840 model solutions). We observed that most common misclassifications happened between the {\it Incorrect} and {\it Partial} classes. Overall, \pg{} shows reasonable performance, exhibiting high correlation with human experts, and also shows potential in identifying nuances that might be overlooked by human graders.
+
+On the other hand, detailed analysis with per-solution breakdowns further reveals that
+\pg{} occasionally still has weaknesses such as failures to identify high-level
+logical errors or being overly punitive for unconventional yet
+correct solutions. Specific examples are highlighted in appendix~\ref{sec:proofgrader-limitations}.
+Therefore, while we hope that \pg{} can serve as a valuable tool for the community to evaluate models on \ipb{}, we recommend that it augments human verification to guarantee the accuracy of individual grading results.
+
+\subsection{\igbs{}}\label{subsec:igb_results}
+The \igb{} measures the ability of models in assessing the quality of a proof when provided with only problem statements and model-generated solutions, without any reference solutions or specific grading guidelines. We measure model performances under two metrics:
+\begin{enumerate}
+    \item {\it Accuracy} -- human gradings on a 7-point scale are first converted to 4 categories {\it (Correct, Almost, Partial, Incorrect)} corresponding to 4 buckets (7, 6-4, 3-1, 0). The categorized human gradings are then compared with model-predicted categories.
+    \item {\it Mean Absolute Error (MAE)} -- model-predicted categories are converted from {\it (Correct, Almost, Partial, Incorrect)} to IMO scores (7, 6, 1, 0) according to Table~\ref{tab:imo_ratings}. We then compare with human grading ground truths on a 7-point scale.
+\end{enumerate}   
+
+\begin{table}[tbh!]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{l|c|c}
+\toprule
+\textbf{Model} & \textbf{Accuracy $\uparrow$} & \textbf{MAE $\downarrow$} \\ 
+\midrule
+\gemini{} & 44.3\% & 30.2\% \\
+\ofourmini{} & 47.3\% & 25.2\%  \\
+\deepthink{} & 52.5\% & 20.5\% \\
+\othree{} & {\bf 54.0\%} & 20.2\%  \\
+\aero{} & 50.2\% & {\bf 18.4\%}  \\
+\bottomrule
+\end{tabular}
+}
+\caption{\igb{} results in accuracy (higher is better) and MAE (lower is better).
+}
+\label{tab:imo-grading-bench-result}
+\end{table}
+
+Results for \igb{} are summarized in Table \ref{tab:imo-grading-bench-result}. In terms of accuracies, \othree{} achieved the highest performance of 54.0\%. The low accuracies highlight the fact that this benchmark is quite challenging in predicting precise categories. The MAE accounts for the fact that different categories are closer semantically, e.g., {\it Correct} vs. {\it Almost} and {\it Partial} vs. {\it Incorrect}. On this metric, \aero{} achieved the best MAE score of $18.4\%$, indicating that there is still significant room for improvement\footnote{Because of our simplified gradings (7, 6, 1, 0), the best possible grader will achieve a {\it golden} MAE of 3.9\% on \igb{}, instead of 0\%.}.
+
+\paragraph{\textit{Comparison with \pgs{}}} Model performances on \igb{} are notably worse than what might be expected from the strong performance of \pg{}, in terms of Pearson correlation coefficients as reported in Section~\ref{subsec:ipb-autograder}. This discrepancy stems from two key methodological distinctions.
+\begin{enumerate}
+    \item First, \pg{} performance was measured on scores aggregated over 30 problems, which smooths out noise from individual grading variations, unlike the per-instance evaluation of \igb{}. 
+    \item Second, the \igb{} evaluation provides models with minimal context—only the problem and the proposed solution; whereas for \pg{} on \ipb{}, we additionally provide both reference solutions and grading guidelines.
+\end{enumerate}
+
+These distinctions explain why \igb{}  with per-instance, minimal-context evaluation is a challenging benchmark; whereas aggregated assessments by \pg{} on \ipb{} can still yield robust model rankings.
+
+\section{Related Work}
+In recent years, harder reasoning math benchmarks have been proposed as performance on existing benchmarks becomes saturated. For example, Olympiad Bench \cite{he2024olympiadbench} and Omni-MATH \cite{gao2024omni} contain questions at the Olympiad level across diverse domains, while Humanity's Last Exam (HLE) \cite{phan2025humanity} evaluates knowledge across many domains. Other benchmarks include Brainteaser \cite{simeng-brainteaser}, which consists of long-form brainteaser puzzles, and Frontier Math~\cite{glazer2024frontiermath}, which contains hard math questions and a hidden evaluation set. MiniF2F~\cite{zheng2021minif2f} provides a benchmark for evaluating formal proofs around Olympiad-level difficulty. Reward Bench~\cite{lambert2024rewardbench} provides a benchmark to evaluate reward models. HARDMath~\cite{fan2024hardmath} presents a challenging math benchmark containing applied mathematics problems that require analytical approximation techniques. The AlphaGeometry papers \cite{Trinh2024-alphageometry-1, chervonyi2025goldmedalistperformancesolvingolympiad-alphageometry2} provide benchmarks of $80$ IMO and IMO Shortlist Euclidean geometry problems from $2000$ to $2024$, written in a domain-specific language. In contrast, \ib{} provides a suite for evaluating advanced mathematical reasoning with short answer matching and rigorous proof evaluation in natural language across a wide variety of Math Olympiad areas.
+
+As performance on math benchmarks continues to improve, robustness benchmarks have been introduced to evaluate potential overfitting and obtain better estimates of models' true reasoning capabilities.  These benchmarks have shown that simply perturbing benchmark questions is enough to significantly hurt performance compared to the original problems.  SVAMP~\cite{patel2021nlp} generated a perturbed benchmark for word math problems, whereas Lila~\cite{mishra2022lila} contained perturbations across a diverse range of reasoning questions. The functional variant of the MATH benchmark~\cite{srivastava2024functional} demonstrated large performance drops across models when varying existing problems. Putnam-AXIOM~\cite{gulati2024putnam} similarly shows that perturbing Putnam questions causes a significant drop in model performance. MATH-Perturb~\cite{huang2025math} also adds simple perturbations to math questions~\cite{2103.03874}, and shows model performance drops, raising concerns about memorization. \citet{lightman2024verifystepbystep} propose an alternative strategy to improve model robustness by supervising the reasoning process from start to finish, rather than solely on the final outcome. This approach led to improved performance on the MATH dataset. \ib{} contributes to robust mathematical reasoning with already modified questions in \iab{}, rigorous proof requirements in \ipb{}, and the task of proof grading in \igb{}.
+
+\section{Conclusion}
+This paper introduced \ib{}, a comprehensive suite of benchmarks for robust evaluation of mathematical reasoning capabilities, including \iab{} for short answer matching, \ipb{} for full proof correctness, and \igb{} for proof verification.
+The three benchmarks demonstrated that frontier models struggle on \ib{} problems and that getting the short answers right does not necessarily equate to correct mathematical reasoning for most models. 
+
+Furthermore, we have developed and validated automated graders for both answers and proofs. Our \ag{} achieves near-human accuracy (98.9\%) , while  \pg{} shows a strong correlation (0.93-0.96 \%) with expert human scores. These tools along with \igb{} provide a scalable and reliable method for the community to evaluate future models, even as human expertise remains the gold standard for high-stakes evaluation.
+
+By releasing \ib{}\footnote{\url{https://imobench.github.io}} to the research community, we aim to shift the community's focus from mere answer-getting to the development of deep, verifiable, and robust reasoning processes. We hope this suite will serve as a valuable tool to measure and drive progress toward more advanced and reliable artificial intelligence.
+
+\section*{Acknowledgments}
+Special thanks to Miroslav Olšák, Seongbin Jeon, Donghyun Kim, Jiwon Kang, Chu-Lan Kao, Sara Javanmardi, and Mahan Malihi for help with \ib{}.
+In addition, we would like to thank Orhan Firat, Tania Bedrax-Weiss, and Ed Chi for reviewing the work and Koray Kavukcuoglu for guidance on the release of \ib{}. Last but not least, we thank all our collaborators in the IMO 2025 effort\footnote{\url{https://goo.gle/imo-gold}} for trusting \ib{} as north-star metrics along the way.
+
+\bibliography{arxiv_latest}
+
+\appendix
+
+\newpage
+
+\input{appendix}
+
+\end{document}
