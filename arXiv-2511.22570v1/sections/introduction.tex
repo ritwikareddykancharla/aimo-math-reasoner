@@ -1,0 +1,29 @@
+\section{Introduction}\label{sec:introduction}
+
+The conventional approach to reinforcement learning (RL) for mathematical reasoning involves rewarding large language models (LLMs) based on whether their predicted final answers to quantitative reasoning problems match ground-truth answers \citep{deepseek-r1}.
+This methodology suffices to allow frontier LLMs to saturate mathematical competitions that primarily evaluate final answers, such as AIME and HMMT.
+However, this reward mechanism has two fundamental limitations.
+First, it serves as an unreliable proxy for reasoning correctness -- a model can arrive at the correct answer through flawed logic or fortunate errors.
+Second, it is inapplicable to theorem proving tasks, where problems may not require producing numerical final answers and rigorous derivation is the primary objective.
+
+Consequently, LLMs trained on quantitative reasoning problems with such final answer reward still frequently produce mathematically invalid or logically inconsistent natural-language proofs.
+Moreover, this training approach does not naturally develop the models' ability to verify proof validity -- they exhibit high false-positive rates, often claiming incorrect proofs are valid even when they contain obvious logical flaws.
+
+The lack of a generation-verification gap in natural-language theorem proving hinders further improvement.
+To address this, we propose developing proof verification capabilities in LLMs.
+Our approach is motivated by several key observations:
+\begin{itemize}
+    \item Humans can identify issues in proofs even without reference solutions -- a crucial ability when tackling open problems.
+    \item A proof is more likely to be valid when no issues can be identified despite scaled verification efforts.
+    % \item The difficulty of identifying valid issues signals proof quality and can be exploited to optimize proof generation.
+    \item The efforts required to identify valid issues can serve as a proxy for proof quality, which can be exploited to optimize proof generation.
+\end{itemize}
+We believe that LLMs can be trained to identify proof issues without reference solutions.
+Such a verifier would enable an iterative improvement cycle: (1) using verification feedback to optimize proof generation, (2) scaling verification compute to auto-label hard-to-verify new proofs, thereby creating the training data to improve the verifier itself, and (3) using this enhanced verifier to further optimize proof generation.
+Moreover, a reliable proof verifier enables us to teach proof generators to evaluate proofs as the verifier does.
+This allows a proof generator to iteratively refine its proofs until it can no longer identify or resolve any issues.
+In essence, we make the model explicitly aware of its reward function and enable it to maximize this reward through deliberate reasoning rather than blind trial-and-error.
+
+Built on DeepSeek-V3.2-Exp-Base \citep{deepseekv32}, we developed \textbf{DeepSeekMath-V2}, a large language model optimized for natural-language theorem proving that demonstrates self-verifiable mathematical reasoning.
+Our model can assess and iteratively improve its own proofs, achieving gold-level performance in premier high-school mathematics competitions including IMO 2025 and CMO 2024.
+On the Putnam 2024 undergraduate competition, it scored 118/120, exceeding the highest score of 90 \footnote{\url{https://kskedlaya.org/putnam-archive/putnam2024stats.html}} obtained by human participants.

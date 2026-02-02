@@ -2,7 +2,11 @@
    "sources" : [
       {
          "usage" : "toplevel",
-         "filename" : "arxiv_latest.tex"
+         "filename" : "main.tex"
+      },
+      {
+         "usage" : "ignore",
+         "filename" : "main.bib"
       }
    ],
    "spec_version" : 1,

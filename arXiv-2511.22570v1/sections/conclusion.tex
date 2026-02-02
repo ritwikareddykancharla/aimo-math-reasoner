@@ -1,0 +1,10 @@
+\section{Conclusion}
+
+We presented DeepSeekMath-V2, a model capable of both generating and verifying mathematical proofs.
+By training models to identify issues in their own reasoning and incentivizing them to address these issues before finalizing outputs, we move beyond the limitations of final-answer-based rewards toward self-verifiable mathematical reasoning.
+Our iterative training process -- alternating between improving verification capabilities and using these to enhance generation -- creates a sustainable cycle where each component drives the other forward.
+Our key technical contributions include: (1) training an accurate and faithful LLM-based verifier for mathematical proofs, (2) using meta-verification to largely reduce hallucinated issues and ensure verification quality, (3) incentivizing the proof generator to maximize proof quality through self-verification, and (4) scaling verification compute to automatically label increasingly hard-to-verify proofs to improve the verifier without human annotation.
+DeepSeekMath-V2 demonstrates strong performance on competition mathematics.
+With scaled test-time compute, it achieved gold-medal scores in high-school competitions including IMO 2025 and CMO 2024, and a near-perfect score on the undergraduate Putnam 2024 competition.
+This work establishes that LLMs can develop meaningful self-evaluation abilities for complex reasoning tasks.
+While significant challenges remain, we hope this research direction contributes to the goal of creating self-verifiable AI systems that can solve research-level mathematics.

@@ -1,0 +1,112 @@
+\section{Experiments}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.99\textwidth]{figures/agg_in_house_mean.pdf}
+  % \vspace{-0.1in}
+  \caption{Average proof scores on CNML-level problems by category and model, as evaluated by our verifier.}
+  \label{fig:one-shot}
+\end{figure}
+
+\subsection{Training Settings}
+
+We employed Group Relative Policy Optimization (GRPO) \citep{deepseekmath} for reinforcement learning, iteratively optimizing proof verification and generation capabilities as described in Section~\ref{sec:method}.
+In each iteration, we first optimized proof verification. The proof generator was then initialized from the verifier checkpoint and optimized for proof generation.
+Starting from the second iteration, the proof verifier was initialized with a checkpoint that consolidated both verification and generation capabilities from the previous iteration through rejection fine-tuning.
+
+\subsection{Evaluation Benchmarks}
+
+We evaluate our final proof generator on the following theorem proving benchmarks:
+
+\noindent
+\textbf{In-House CNML-Level Problems} 91 theorem-proving problems spanning algebra (13), geometry (24), number theory (19), combinatorics (24), and inequality (11), comparable in difficulty to problems from Chinese National High School Mathematics League (CNML)
+
+\noindent
+\textbf{Competition Problems}
+\begin{itemize}
+    \item \textbf{IMO 2025} (6 problems): The International Mathematical Olympiad, the premier global mathematics competition for pre-university students
+    \item \textbf{CMO 2024} (6 problems): The China Mathematical Olympiad, China's national championship
+    % \item \textbf{USAMO 2025} (6 problems): The USA Mathematical Olympiad, the final round of US mathematics competitions
+    \item \textbf{Putnam 2024} (12 problems): The William Lowell Putnam Competition, the preeminent mathematics competition for undergraduate students in North America
+    \item \textbf{ISL 2024} (31 problems): The IMO Shortlist, a collection of problems proposed by participating countries and considered by the Problem Selection Committee for potential inclusion in IMO 2024
+    \item \textbf{IMO-ProofBench} (60 problems): Developed by the DeepMind team behind DeepThink IMO-Gold \citep{deepthinkimo}, this benchmark \citep{imobench} is divided into a basic set (30 problems, pre-IMO to IMO-Medium difficulty) and an advanced set (30 challenging problems simulating complete IMO examinations, up to IMO-Hard level)
+\end{itemize}
+
+\subsection{Evaluation Results}
+
+\subsubsection{One-Shot Generation}
+
+We first evaluate the model's ability to generate correct proofs without iterative refinement.
+On the in-house problems, we generated 8 proof samples per problem for each evaluated model.
+Proof correctness was measured by majority voting across 8 verification analyses produced by our final verifier.
+As shown in Figure~\ref{fig:one-shot}, across all categories of CNML-level problems -- algebra, geometry, number theory, combinatorics, and inequality -- DeepSeekMath-V2 consistently outperforms GPT-5-Thinking-High \citep{gpt5} and Gemini 2.5-Pro \citep{gemini}, demonstrating superior theorem-proving ability across domains.
+
+\subsubsection{Sequential Refinement with Self-Verification}
+
+\begin{wrapfigure}{r}{0.52\textwidth}  % r = right, width = 30% of text width
+  \centering
+  \vspace{-6pt}
+  \includegraphics[width=0.5\textwidth]{figures/ISL2024_scores.pdf} % small margin inside box
+  \caption{Proof quality improvements as the maximum sequential iterations varies from 1 (no refinement) to 8 (initial generation plus up to 7 refinements based on self verification).\label{fig:seq_refine}}
+  \vspace{-6pt}
+\end{wrapfigure}
+
+
+For challenging problems from competitions like IMO and CMO, models often cannot generate comprehensive and rigorous proofs in a single attempt within the 128K token limit.
+When this occurs, our proof generator recognizes its proof is invalid through self-verification but lacks the context length to resolve all identified issues in a single attempt.
+
+To explore how extended context and self-verification can improve proof quality, we evaluate sequential refinement with self-verification.
+This approach first generates a proof with self-analysis, then iteratively re-prompts the generator with its previous output (see Appendix \ref{app:proof_refinement} for the refinement prompt), allowing it to address identified issues.
+The process continues until the generator assigns itself a perfect score or reaches the maximum number of sequential attempts.
+
+Figure~\ref{fig:seq_refine} demonstrates proof quality improvement through sequential refinement on IMO Shortlist 2024 problems.
+For each problem, we launched 32 independent refinement threads.
+Proof correctness was measured by majority voting across 32 verification analyses from our final verifier.
+We report two metrics in Figure~\ref{fig:seq_refine}: (1) Pass@1 -- the average score of the final proof from each thread, and (2) Best@32 -- the score of the best proof per problem, selected by self-assigned scores across all threads.
+The self-selected best proofs achieve significantly higher verification scores than the thread average, demonstrating our generator's ability to accurately assess proof quality.
+Furthermore, Pass@1 improves substantially as maximum sequential attempts increase, showing that self-verification effectively guides iterative improvement.
+These results confirm that our generator can reliably differentiate between high-quality and flawed proofs, and leverage this self-awareness to systematically improve its mathematical reasoning.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.97\textwidth]{figures/proofbench_bars.pdf}
+  \vspace{-0.1in}
+  \caption{Expert evaluation results on the Basic and Advanced subsets of IMO-ProofBench. All results are sourced from \cite{imobench}, with the exception of DeepSeekMath-V2, which was evaluated by our experts following the grading guidelines.}
+  \label{fig:imo_proof_bench}
+\end{figure}
+
+\subsubsection{High-Compute Search}
+
+\begin{wraptable}{r}{0.52\textwidth}
+  \centering
+  \begin{tabular}{lll}
+    \toprule
+      Contest & Problems & Points \\
+    \midrule
+      IMO 2025 & \textbf{\colorbox{mygray}{P1}}, \textbf{\colorbox{mygray}{P2}}, \textbf{\colorbox{mygray}{P3}}, \textbf{\colorbox{mygray}{P4}}, \textbf{\colorbox{mygray}{P5}} & 83.3\% \\
+    \midrule
+      CMO 2024 & \textbf{\colorbox{mygray}{P1}}, \textbf{\colorbox{mygray}{P2}}, \textbf{\colorbox{mygray}{P4}}, \textbf{\colorbox{mygray}{P5}}, \textbf{\underline{P6}} & 73.8\% \\
+    \midrule
+      Putnam 2024 & \textbf{\colorbox{mygray}{A1}} $\sim$ \textbf{\colorbox{mygray}{B4}}, \textbf{\underline{B5}}, \textbf{\colorbox{mygray}{B6}} & 98.3\% \\
+    \bottomrule
+  \end{tabular}
+  \caption{Problems in gray are \textbf{\colorbox{mygray}{fully solved}}, while underlined problems received \textbf{\underline{partial credit}}. \label{tab:search}}
+\end{wraptable}
+
+To solve the most challenging problems, we scaled both verification and generation compute -- using extensive verification to identify subtle issues and parallel generation to explore diverse proof strategies.
+
+Our approach maintains a pool of candidate proofs for each problem, initialized with 64 proof samples with 64 verification analyses generated for each.
+In each refinement iteration, we select the 64 highest-scoring proofs based on average verification scores and pair each with 8 randomly selected analyses, prioritizing those identifying issues (scores 0 or 0.5).
+Each proof-analysis pair is used to generate one refined proof, which then updates the candidate pool.
+This process continues for up to 16 iterations or until a proof successfully passes all 64 verification attempts, indicating high confidence in correctness.
+All experiments used a single model, our final proof generator, which performs both proof generation and verification.
+
+To validate our results, mathematical experts assessed the highest-scoring proofs.
+As shown in Table~\ref{tab:search}, our approach solved 5 of 6 problems from IMO 2025 and 4 problems plus partial credit on another from CMO 2024, achieving gold medal performance in both pinnacle high-school competitions.
+On Putnam 2024, the preeminent undergraduate mathematics competition, our model solved 11 of 12 problems completely and the remaining problem with minor errors, scoring 118/120 and surpassing the highest human score of 90.
+Figure \ref{fig:imo_proof_bench} shows the results on IMO-ProofBench.
+Our approach outperforms DeepMind's DeepThink (IMO Gold) on the basic set and remains competitive on the advanced set, while substantially outperforming all other baselines.
+We observe that the hardest IMO-level problems remain challenging for our model.
+Notably, for problems not fully solved, our generator typically identifies the genuine issues in its proofs, while fully solved problems pass all 64 verification attempts.
+This demonstrates that we can successfully train LLM-based verifiers to assess proofs previously considered difficult to verify automatically.
+By scaling test-time compute under verifier guidance, our model solves problems that require hours of effort from human competitors.

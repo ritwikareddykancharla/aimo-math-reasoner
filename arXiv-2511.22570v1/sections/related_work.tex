@@ -1,0 +1,19 @@
+\section{Related Work}
+
+Reasoning models \citep{o1,deepseek-r1} have saturated quantitative reasoning benchmarks like AIME and HMMT within one year.
+This rapid advancement is partly attributed to the well-defined evaluation criterion: if we care only about final answers, then quantitative reasoning is easy to verify.
+However, this final answer metric is inapplicable to theorem proving, which often requires no numerical answers but demands rigorous step-by-step derivation.
+Informal mathematical proofs have long been considered hard to verify automatically, lacking reliable approaches to assess proof correctness.
+Recent developments suggest this barrier may be surmountable.
+Models like Gemini-2.5 Pro already demonstrate a certain level of self-verification capabilities, which can refine their own solutions to improve quality \citep{geminiimo}.
+More significantly, DeepMind's internal DeepThink variant \citep{deepthinkimo} achieved gold medal performance at IMO 2025 using pure natural language reasoning -- serving as an existence proof that LLM-based verification of complex proofs is achievable.
+Recent research has begun exploring whether reasoning models can evaluate proofs, both with and without reference solutions \citep{opc,imobench}, showing promising results.
+In this work, we open source DeepSeekMath-V2 and our training methodology as concrete steps toward self-verifiable mathematical reasoning, showing how models can learn to verify and improve their own proofs.
+
+Proof assistants like Lean \citep{lean} and Isabelle \citep{isabelle} offer a reliable approach to verify proofs -- proofs must be written in formal language, but once compiled, correctness is guaranteed.
+AlphaProof \citep{alphaproof,alphageometry,alphageometry2}, a system specialized for formal proof search, achieved silver-level performance at IMO 2024 but required intensive computation.
+While using informal reasoning to guide formal proof generation has been explored extensively \citep{dsp}, recent reasoning models have dramatically improved informal reasoning quality, making this guidance far more effective.
+Systems like DeepSeek-Prover-V2 \citep{deepseekproverv2} and Seed-Prover \citep{seedprover} can now produce substantially more valid formal proofs within the same computational budget, with Seed-Prover solving 5 of 6 problems at IMO 2025.
+Notably, these results were achieved without specifically optimizing the informal reasoning components for theorem proving tasks.
+We believe advancing natural language theorem proving will significantly benefit formal reasoning.
+We hope to contribute toward truly reliable mathematical reasoning systems that leverage both informal insights and formal guarantees to advance mathematical research.

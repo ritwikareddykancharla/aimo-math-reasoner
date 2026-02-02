@@ -1,0 +1,147 @@
+\section{Method}\label{sec:method}
+
+\subsection{Proof Verification}
+
+\subsubsection{Training a Verifier to Identify Issues and Score Proofs}
+\label{sec:verifier}
+
+We developed high-level rubrics $\mathcal{I}_v$ for proof evaluation (see Appendix~\ref{app:proof_verification}) with the goal of training a verifier to evaluate proofs according to these rubrics, mirroring mathematical experts' assessment process.
+Specifically, given a problem $X$ and a proof $Y$, the verifier $\pi_\phi(\cdot\vert{}X, Y, \mathcal{I}_v)$ is designed to produce a proof analysis that first summarizes identified issues (if any) and then assigns a score based on three levels:
+1 for complete and rigorous proofs with all logical steps clearly justified;
+0.5 for proofs with sound overall logic but minor errors or omitted details;
+and 0 for fundamentally flawed proofs containing fatal logical errors or critical gaps.
+
+\paragraph{Curating Cold Start RL Data}
+We constructed our initial training data through the following process:
+
+\begin{enumerate}
+    \item We crawled problems from Art of Problem Solving (AoPS) contests \footnote{\url{https://artofproblemsolving.com/community/c13_contest_collections}}, prioritizing math olympiads, team selection tests, and post-2010 problems explicitly requiring proofs, totaling 17,503 problems.
+    This problem set is denoted as $\mathcal{D}_p$.
+    
+    \item We generated candidate proofs using a variant of DeepSeek-V3.2-Exp-Thinking. As this model was not optimized for theorem proving and tended to produce concise but error-prone outputs, we prompted it to iteratively refine its proofs over multiple rounds to improve comprehensiveness and rigor.
+    
+    \item We randomly sampled proofs across diverse problem types (e.g., algebra and number theory) and had mathematical experts score each proof according to the evaluation rubrics described above.
+\end{enumerate}
+This process yielded an initial RL dataset $\mathcal{D}_v = \{(X_i, Y_i, s_i)\}$, where each item consists of a problem $X_i$, a proof $Y_i$, and an overall proof score $s_i \in \{0, 0.5, 1\}$.
+
+\paragraph{RL Objective.}  
+Building on a version of DeepSeek-V3.2-Exp-SFT which was supervised fine-tuned on reasoning data related to mathematics and code, we trained the model with reinforcement learning to produce proof analyses using two reward components:
+
+\begin{itemize}
+    \item \textbf{Format reward} $R_{\text{format}}$: An indicator function that enforces the model to generate both a summary of identified issues and a proof score, by checking whether the final response contains the key phrase ``Here is my evaluation of the solution:'' as well as a score within \texttt{\textbackslash boxed\{\}} following ``Based on my evaluation, the final overall score should be:''.
+    
+    \item \textbf{Score reward} $R_{\text{score}}$: Rewards based on proximity between predicted score $s_i'$ and annotated score $s_i$:
+    \begin{equation}
+        R_{\text{score}}(s_i', s_i) = 1 - |s_i' - s_i|
+    \end{equation}
+\end{itemize}
+The RL objective for training the verifier is:
+\begin{equation}
+    \max_{\pi_\phi} \mathbb{E}_{(X_i, Y_i, s_i) \sim \mathcal{D}_v, (V_i', s_i') \sim \pi_\phi(\cdot|X_i, Y_i)} \left[ R_{\text{format}}(V_i') \cdot R_{\text{score}}(s_i', s_i) \right]
+\end{equation}
+where $V_i'$ denotes the verifier's final response and $s_i'$ is the proof score extracted from it.
+
+\subsubsection{Introducing Meta-Verification to Review Proof Analyses}
+
+The approach described in Section~\ref{sec:verifier} trains proof verification through RL to align predicted proof scores with expert annotations, but provides no direct supervision on the identified issues themselves.
+This creates a critical vulnerability: when evaluating flawed proofs (where $s_i < 1$) during training, the verifier can receive full reward by predicting the correct scores while hallucinating non-existent issues, undermining its trustworthiness.
+
+To address this problem, we introduce \textbf{meta-verification}: a secondary evaluation process that assesses whether issues identified by the verifier indeed exist and whether these issues logically justify the predicted proof score according to the evaluation rubrics $\mathcal{I}_v$.
+The complete meta-verification rubrics $\mathcal{I}_{mv}$ are detailed in Appendix~\ref{app:meta_verification}.
+
+We trained a dedicated meta-verifier using RL to perform this evaluation.
+By incorporating the meta-verifier's feedback into verifier training, we can improve the faithfulness of the verifier's issue identification.
+
+\paragraph{Meta-Verifier Training Process}
+
+\begin{enumerate}
+    \item We obtained an initial verifier $\pi_\phi$ following Section~\ref{sec:verifier}.
+    
+    \item Mathematical experts scored the quality of verifier responses according to $\mathcal{I}_{mv}$, creating dataset $\mathcal{D}_{mv} = \{(X_i, Y_i, V_i, ms_i)\}$, where $V_i$ is the analysis of proof $Y_i$ and $ms_i \in \{0, 0.5, 1\}$ is the expert-annotated quality score.
+    
+    \item We trained a meta-verifier $\pi_\eta(\cdot|X, Y, V, \mathcal{I}_{mv})$ to analyze the verifier's proof analysis $V$.
+    The meta-verifier produces a summary of issues found in the analysis itself, followed by a quality score measuring how accurate and justified the verifier's analysis is.
+    The RL objective follows the same structure as the verifier training, with format and score rewards.
+
+\end{enumerate}
+
+Using the trained meta-verifier $\pi_\eta$, we enhanced the verifier training by integrating meta-verification feedback into the reward function:
+\begin{equation}
+    R_V = R_{\text{format}} \cdot R_{\text{score}} \cdot R_{\text{meta}}
+\end{equation}
+where $R_{\text{meta}}$ is the quality score from the meta-verifier.
+
+We trained the enhanced verifier on both the verification dataset $\mathcal{D}_v$ and the meta-verification dataset $\mathcal{D}_{mv}$, using the same reward mechanism on $\mathcal{D}_{mv}$ as used for training the meta-verifier.
+The resulting model can perform both proof verification and meta-verification tasks.
+
+On a validation split of $\mathcal{D}_v$, the average quality score of the verifier's proof analyses -- as evaluated by the meta-verifier -- improved from 0.85 to 0.96, while maintaining the same accuracy in proof score prediction.
+
+\subsection{Proof Generation}
+
+\subsubsection{Training a Generator for Theorem Proving}
+
+With verifier $\pi_\phi$ serving as a generative reward model, we train a proof generator $\pi_\theta(\cdot\vert{}X)$ with the RL objective:
+
+\begin{equation}
+    \max_{\pi_\theta} \mathbb{E}_{X_i \sim \mathcal{D}_p, Y_i \sim \pi_\theta(\cdot|X_i)} [R_Y]
+\end{equation}
+where $R_Y$ is the proof score produced by $\pi_\phi(\cdot\vert{}X_i, Y_i, \mathcal{I}_v)$.
+
+\subsubsection{Enhancing Reasoning via Self-Verification}
+
+When a proof generator fails to produce a completely correct proof in one shot -- common for challenging problems from competitions like IMO and CMO -- iterative verification and refinement can improve results.
+This involves analyzing the proof with an external verifier and prompting the generator to address identified issues.
+
+However, we observed a critical limitation: when prompted to both generate and analyze its own proof in one shot, the generator tends to claim correctness even when the external verifier easily identify flaws.
+In other words, while the generator can refine proofs based on external feedback, it fails to evaluate its own work with the same rigor as the dedicated verifier.
+
+This observation motivated us to endow the proof generator with genuine verification capabilities.
+During training, we prompt the generator $\pi_\theta$ to produce a proof $Y$ followed by a self-analysis $Z$ that follows the same format and rubrics $\mathcal{I}_v$ as the verifier (see Appendix~\ref{app:proof_generation}).
+We denote the proof score predicted in the self-analysis as $s^\prime$.
+
+To ensure faithful self-evaluation, we use the verifier $\pi_\phi$ to assess both components: the proof $Y$ receives score $R_Y = s$, and the self-analysis $Z$ receives a meta-verification score $R_\text{meta}(Z) = ms$.
+The reward function combines these assessments:
+
+\begin{align}
+    R &= R_{\text{format}}(Y, Z) \cdot (\alpha \cdot R_Y + \beta \cdot R_Z) \\
+    R_Z &= R_{\text{score}}(s^\prime, s) \cdot R_{\text{meta}}(Z)
+\end{align}
+where $R_{\text{format}}(Y, Z)$ verifies that both the proof and self-analysis follow the specified format, $R_{\text{score}}(s^\prime, s)$ rewards accurate self-assessment.
+We set $\alpha = 0.76$ and $\beta = 0.24$.
+This reward structure creates the following incentives:
+\begin{itemize}
+    \item Faithful acknowledgment of errors is rewarded over false claims of correctness.
+    \item The highest rewards come from producing correct proofs and accurately recognizing their rigor.
+    \item A good strategy to obtain high rewards for the proof generator is to identify and resolve as many issues as possible before finalizing the response.
+\end{itemize}
+
+\subsection{Synergy Between Proof Verification and Generation}
+
+The proof verifier and generator create a synergistic cycle:
+the verifier improves the generator, and as the generator improves, it produces new proofs that challenge the verifier's current capabilities.
+These challenging cases -- where the verifier may fail to identify issues in a single attempt -- become valuable training data for enhancing the verifier itself.
+
+To retrain and improve the verifier, we need labeled correctness data for newly generated proofs.
+Manual annotation, while straightforward, becomes increasingly time-consuming as problems grow harder and errors become more subtle.
+To boost annotation efficiency, we generated multiple verifier analyses per proof to surface potential issues for human review.
+
+From this AI-assisted annotation process, we recognized two facts that make it feasible to push the level of automation a step further:
+
+\begin{enumerate}
+    \item Scaling verifier samples increases the probability of catching real issues in flawed proofs.
+    \item Reviewing the verifier's identified issues is exactly \textbf{meta-verification}, which is easier than identifying issues from scratch. Meta-verification is also more sample-efficient for LLMs to master.
+\end{enumerate}
+Building on these observations, we developed the following automated labeling process:
+
+\begin{enumerate}
+    \item For each proof, generate $n$ independent verification analyses
+    \item For analyses reporting issues (scores 0 or 0.5), generate $m$ meta-verification assessments to validate the identified problems.
+    An analysis is deemed valid if the majority of meta-assessments confirm its findings
+    \item For each proof, we examine analyses that assign the lowest score.
+    If at least $k$ such analyses are deemed valid, the proof is labeled with that lowest score.
+    If no legitimate issues are identified across all verification attempts, the proof is labeled with 1.
+    Otherwise, the proof is discarded or routed to human experts for labeling
+    % Label each proof with the lowest score from valid analyses, defaulting to 1 only if no legitimate issues surface across all verification attempts
+\end{enumerate}
+In our last two training iterations, this fully automated pipeline replaced human annotation entirely.
+Quality checks confirmed that the automated labels aligned well with expert judgments. %, validating our approach of using meta-verification to break the dependence on manual labeling.

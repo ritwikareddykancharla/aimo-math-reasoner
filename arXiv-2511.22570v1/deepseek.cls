@@ -1,58 +1,5 @@
-%%%%%%%%%
-%
-% Basic style file for Google DeepMind open-access papers, internal reports, and unpublished %
-% papers.
-%
-% This class allows for several options depending on the preferences of the authors.
-% Use it in the following way, with the full set of option possible:
-% \documentclass[11pt, a4paper, twocolumn, logo, address, copyright, nonumbering,
-% internal]{googledeepmind}
-%
-% Options:
-%    - 11pt: Sets the normal font size of the text. Can be only 10, 11, 12pt.
-%    - a4paper: Paper size. Usually would not adjust.
-%    - twocolumn: Makes the paper into two column mode; single column by default.
-%    - logo: Adds the Google DeepMind logo to the top left. No logo included if left out.
-%    - address: Add a postal address for correspondence to the bottom footer.
-%    - copyright: Add a copyright statement to the first page of the paper in the left footnote
-%    - nonumbering: Uses unnumbered sections.
-%    - internal: for internal only docs that should not be shared externally.
-%           Can only use techreportnumber with this option.
-%
-% Date of Paper
-%   The report is by default given the curren date in the top right. If you want to fix the
-%   date: add the date to your preamble with your own date as follows:
-%   \renewcommand{\today}{1 January 2000}
-%
-% Confidentiality
-%   Change the confidentiality statement for internal docs by adding this in the preable
-%   \renewcommand{\internalonly}{Confidential.}
-%
-% ----------------
-% Licence: This template is released under the Creative Commons licence
-% Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
-%
-%
-% Known issues:
-%   - Package todonotes does not work in the abstract
-%
-% Version history:
-% v0.4, Sept 2023 - Update to Google DeepMind unit
-% v0.31, May 2019 - Allow corresponding authors without internal option
-% v0.3, March 2019 - Math font consistency, better handling of optional arguments
-% v0.2, January 2019 - Consistency of fonts, margins, additional notes
-% v0.1, December 2018 - Initial version for testing
-%
-% Ongoing Review
-%    We review and improve this regularly.
-%    Send comments to shakir@
-%
-%  DeepMind, London, 2019
-%
-% %%%%%%%%%%%%%%%
-
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{googledeepmind} % no versioning; versioning does not work well with arxiv.
+\ProvidesClass{deepseek} % no versioning; versioning does not work well with arxiv.
 
 %%======== Pckage options and base class ========
 \RequirePackage{xifthen}
@@ -61,11 +8,11 @@
 \newboolean{address}
 \newboolean{copyright}
 \newboolean{internal}
-\DeclareOption{nonumbering}{\setboolean{nonumbering}{true}}
+\DeclareOption{nonumbering}{\setboolean{nonumbering}{false}}
 \DeclareOption{logo}{\setboolean{logo}{true}}
 \DeclareOption{address}{\setboolean{address}{true}}
 \DeclareOption{copyright}{\setboolean{copyright}{true}}
-\DeclareOption{internal}{\setboolean{internal}{true}}
+\DeclareOption{internal}{\setboolean{internal}{false}}
 \DeclareOption*{\PassOptionsToClass{\CurrentOption}{extarticle}}
 \ProcessOptions
 \LoadClass{extarticle}
@@ -78,8 +25,11 @@
 \RequirePackage{amsthm, amsmath, amsfonts, amssymb}
 \RequirePackage{cmap}
 \RequirePackage[T1]{fontenc}
-\RequirePackage{url}
-\RequirePackage[colorlinks=true, allcolors=blue]{hyperref}
+% JH: switched to xurl from url due to wrapping issues. This fixes it. For example, the Megatron-Turing NLG link
+\RequirePackage{xurl}
+% \RequirePackage[colorlinks=true, allcolors=blue]{hyperref}  % cite is blue
+% \RequirePackage[colorlinks=true, allcolors=black]{hyperref}
+\RequirePackage{hyperref}
 \RequirePackage{pifont}
 \RequirePackage[dvipsnames]{xcolor}
 \RequirePackage{textcomp} % For copyright symbol styling
@@ -97,7 +47,7 @@
 \RequirePackage{fancyhdr}  % custom headers/footers
 \RequirePackage{lastpage}  % Number of pages in the document
 % Lists and their spacing
-\RequirePackage{enumitem}
+\RequirePackage{enumitem} 
 \setlist[itemize]{noitemsep}
 \setlist[enumerate]{noitemsep}
 % Title, Abstract, Bibliography
@@ -107,7 +57,7 @@
 \RequirePackage{caption}
 \RequirePackage{needspace}
 
-%%======== Can use any of these fonts ========
+%%======== Can use any of these fonts ======== 
 %\RequirePackage{charter}
 %\RequirePackage[scaled]{helvet}
 %\RequirePackage{bookman}
@@ -115,11 +65,11 @@
 %\RequirePackage[default]{opensans} %fosfamily
 %\usepackage{antpolt}
 % Math fonts
-%\RequirePackage{mathpazo} % Palatino
+\RequirePackage{mathpazo} % Palatino
 %\usepackage{euler} % for math fints
 
 % Use Bitstream Charter as the main font. Does not include a typewriter font.
-\RequirePackage{XCharter}
+% \RequirePackage{XCharter}
 \RequirePackage[xcharter,bigdelims,vvarbb]{newtxmath}
 
 % Use the typewriter font from lmodern, scaled up to match Charter's xheight.
@@ -129,8 +79,8 @@
 \RequirePackage[scaled=1.1]{zlmtt}
 
 %%======== Margins and column spacing ========
-\RequirePackage[left=2.2cm,%
-right=2.2cm,%
+\RequirePackage[left=2.5cm,%
+right=2.5cm,%
 top=3cm,%
 bottom=3cm,%
 headheight=40pt,%
@@ -144,14 +94,17 @@ a4paper]{geometry}%
 %% *Custom font sizes and styles
 \newcommand{\watermarkfont}{\color{black50}\normalfont\fontsize{10}{12}\selectfont}
 \newcommand{\headerfont}{\normalfont\sffamily\fontsize{8}{10}\selectfont}
-\newcommand{\titlefont}{\color{black}\normalfont\bfseries\fontsize{21}{23}\selectfont}
+% \newcommand{\titlefont}{\color{black}\normalfont\bfseries\fontsize{18}{20}\selectfont} 
+\newcommand{\titlefont}{\color{black}\normalfont\bfseries\fontsize{16}{20}\selectfont} 
+
 \newcommand{\datesfont}{\normalfont\sffamily\itshape\fontsize{8}{10}\selectfont}
 \newcommand\urlheaderfont{\color{blue}\fontsize{8}{10}\selectfont}
-\newcommand{\absfont}{\bfseries\linespread{1.2}\fontsize{10}{12}\selectfont}
+\newcommand{\absfont}{\linespread{1.2}\fontsize{11}{12}\selectfont}
 \newcommand{\keywordstitlefont}{\bfseries\linespread{1.2}\fontsize{8}{10}\selectfont}
 \newcommand{\keywordsfont}{\itshape\linespread{1.2}\fontsize{11}{12}\selectfont}
 \newcommand{\copyrightfont}{\normalfont\fontsize{7}{9}\selectfont}
-\newcommand{\footerfont}{\color{black}\normalfont\fontsize{8}{10}\selectfont}
+% \newcommand{\footerfont}{\color{black}\normalfont\fontsize{10}{10}\selectfont}
+\newcommand{\footerfont}{\color{black}\normalfont\fontsize{11}{12}\selectfont}
 \newcommand{\subjectfont}{\color{white}\bfseries\fontsize{10}{12}\selectfont}
 \newcommand{\headingfont}{\color{black}\bfseries\fontsize{13}{14}\selectfont}
 
@@ -171,72 +124,85 @@ a4paper]{geometry}%
 %%========  Author and affiliation ========
 \RequirePackage{authblk}
 \setcounter{Maxaffil}{0}
-\setlength{\affilsep}{0.2em}
-\renewcommand\Authfont{\normalfont\bfseries\fontsize{9}{13}\selectfont}
-\renewcommand\Affilfont{\normalfont\fontsize{8}{10}\selectfont}
+% \setlength{\affilsep}{0.2em}  %
+% \renewcommand\Authfont{\normalfont\bfseries\fontsize{11}{15}\selectfont\centering}
+\renewcommand\Authfont{\normalfont\fontsize{11}{15}\selectfont\centering}
+\renewcommand\Affilfont{\bfseries\fontsize{13}{15}\selectfont\centering}
 \makeatletter
-\renewcommand\AB@affilsepx{, \protect\Affilfont}
+\renewcommand\AB@affilsepx{ , \protect\Affilfont}
 \makeatother
-\renewcommand\Authands{ and }
+% \renewcommand\Authands{ and }
+\renewcommand\Authands{, }
 
-\newcommand{\internalonly}{Confidential -- Google DeepMind, do not share or forward externally.}
-\newcommand{\copyrightext}{\footerfont \textcopyright\, \the\year{} Google DeepMind. All rights
+\newcommand{\internalonly}{DeepSeek, Confidential. Internal Only.}
+\newcommand{\copyrightext}{\footerfont \textcopyright\, \the\year{} DeepSeek. All rights 
 reserved}
 
 
 %%======== Header and Footer Content ========
 %
 % Header and Footer for the first page
-\pagestyle{fancy}   % Enables the custom headers/footers
+% \pagestyle{fancy}   % Enables the custom headers/footers
+
 \fancypagestyle{firststyle}{
-	\fancyhead[L]{
-		\ifthenelse{\boolean{logo}}{
-			\includegraphics[width=90pt]{Google_DeepMind_Logo_rgb_3320x512px}
-	 }{}
+    \fancyhead[R]{
+        % Other content for the left side of the header, if any
+    }
+
+    \fancyhead[L]{
+        \ifthenelse{\boolean{logo}}{
+            \includegraphics[width=120pt]{logo/DeepSeeK}
+        }{}
+        % Other content for the right side of the header
+        \ifdefined\paperurl
+        \if\relax\the\paperurl\relax \else 
+            \href{\the\paperurl}{\urlheaderfont \itshape \the\paperurl}\\ \fi
+        \else \fi
+        {\footerfont\itshape\monthyeardate\today}
+    }
+    % \fancyhead[C]{\textbf{Your Title Here}}
+    \fancyhead[C]{}
+    
+    %
+    \fancyfoot[L]{
+    	\ifdefined\correspondingauthor
+    	\if\relax\the\correspondingauthor\relax 
+    	\else \footerfont {*\the\correspondingauthor \\} \fi
+    	\else \fi
+        \ifthenelse{\boolean{internal}}{\footerfont \internalonly \\}{\footerfont\bfseries\relax}
+    	\ifthenelse{\boolean{address}}{
+    		\itshape\footerfont DeepSeek, China \\}{} 
+    	% \ifthenelse{\boolean{copyright}}{\copyrightext}{}
+    }
+    \fancyfoot[R]{
+    	\ifthenelse{\boolean{internal}}{
+    	\ifdefined\reportnumber
+    	\if\relax\the\reportnumber\relax 
+    	\else \footerfont\itshape  {\footerfont \bfseries
+    % 	DeepSeek Technical Report \the\reportnumber
+    	} \fi
+    	\else \fi
+    	}{\footerfont\bfseries\relax}
+    }
+    \fancyfoot[C]{\footerfont\bfseries\relax}
 }
-\fancyhead[R]{
-	\ifdefined\paperurl
-	\if\relax\the\paperurl\relax \else
-		\href{\the\paperurl}{\urlheaderfont \itshape \the\paperurl}\\ \fi
-	\else \fi
-	{\footerfont\itshape\monthyeardate\today}
-}
-\fancyhead[C]{}
-%
-\fancyfoot[L]{
-	\ifdefined\correspondingauthor
-	\if\relax\the\correspondingauthor\relax
-	\else \footerfont\itshape  {Corresponding author(s): \the\correspondingauthor \\} \fi
-	\else \fi
-    \ifthenelse{\boolean{internal}}{\footerfont \internalonly \\}{\footerfont\bfseries\relax}
-	\ifthenelse{\boolean{address}}{
-		\itshape\footerfont Google DeepMind, 5 New Street Square, London EC4A 3TW \\}{}
-	\ifthenelse{\boolean{copyright}}{\copyrightext}{}
-}
-\fancyfoot[R]{
-	\ifthenelse{\boolean{internal}}{
-	\ifdefined\reportnumber
-	\if\relax\the\reportnumber\relax
-	\else \footerfont\itshape  {\footerfont \bfseries Google DeepMind Technical Report \the\reportnumber} \fi
-	\else \fi
-	}{\footerfont\bfseries\relax}
-}
-\fancyfoot[C]{\footerfont\bfseries\relax}}
 
 % Header and Footer for pages from 2 onwards
 \fancyhead[L,R]{}
 \makeatletter
-\fancyhead[C]{\footerfont \@title}
+\fancyhead[C]{\footerfont DeepSeek LLM: Scaling Open-Source Language Models with Longtermism}
+% \fancyhead[C]{DeepSeek Technical Report}
+
 \makeatother
 \fancyfoot[C]{}
 \fancyfoot[L]{
-	\ifthenelse{\boolean{internal}}{\footerfont \internalonly\newline
+	\ifthenelse{\boolean{internal}}{\footerfont \internalonly\newline 
 		\ifdefined\reportnumber
-		\if\relax\the\reportnumber\relax
-		\else \footerfont {GDM-TR \the\reportnumber} \fi
+		\if\relax\the\reportnumber\relax 
+		\else \footerfont {} \fi
 		\else \fi}{\footerfont\bfseries\relax}
 }
-\fancyfoot[R]{\footerfont \thepage}
+\fancyfoot[C]{\footerfont \thepage}
 
 % Header and footer rules (coloured).
 \renewcommand{\headrulewidth}{1pt}
@@ -250,15 +216,10 @@ reserved}
 {\par\noindent\\  \ignorespaces \bfseries}
 {\par\bigskip}
 
-%%========  Bibliography using bibtex ========
-\addto{\captionsenglish}{\renewcommand{\refname}{References}}
-\newcommand{\citeas}[1]{\Needspace*{8\baselineskip}\noindent\bibentry{#1}}
-% Uncomment the next line if you want the  numbered refs to be "1." instead of "[1]".
-%\makeatletter \renewcommand\@biblabel[1]{#1.} \makeatother
 
 %%======== Abstract and section formatting ========
 \def\xabstract{abstract}
-\long\def\abstract#1\end#2{\def\two{#2}\ifx\two\xabstract
+\long\def\abstract#1\end#2{\def\two{#2}\ifx\two\xabstract 
 	\long\gdef\theabstract{\ignorespaces#1}
 	\def\go{\end{abstract}}\else
 \typeout{^^J^^J PLEASE DO NOT USE ANY \string\begin\space \string\end^^J
@@ -272,6 +233,7 @@ THE ABSTRACT\vskip12pt}\let\go\relax\fi
 \makeatletter
 \newcommand{\abscontent}{
 	\noindent
+        \centerline{\fontsize{15pt}{14pt}\selectfont\textbf{Abstract}}\vspace{5ex}
 	\parbox{\dimexpr\linewidth}{\absfont \theabstract}
 	\@ifundefined{@keywords}{}{
 		\vskip1em \noindent \keywordsfont  Keywords: \@keywords}
@@ -280,10 +242,10 @@ THE ABSTRACT\vskip12pt}\let\go\relax\fi
 \if@twocolumn%
 \renewcommand{\maketitle}{
 	\twocolumn[
-	\begin{adjustwidth}{0pt}{24pt}
+	\begin{adjustwidth}{0pt}{0pt}
 		\begin{flushleft}
 			{
-				{ \raggedright \titlefont
+				{ \raggedright \titlefont 
 				\@title\par}%
 				\vskip11pt
 				{\raggedright \@author\par}
@@ -299,13 +261,14 @@ THE ABSTRACT\vskip12pt}\let\go\relax\fi
 }%
 \else% \@twocolumnfalse
 \renewcommand{\maketitle}{\bgroup\setlength{\parindent}{0pt}
-	\begin{adjustwidth}{0pt}{24pt}
+        \vspace*{3pt}
+	\begin{adjustwidth}{0pt}{0pt}  
 		\begin{flushleft}
 			{
 				{\raggedright \titlefont \@title\par}%
-				\vskip11pt
+				\vskip20pt
 				{\raggedright \@author\par}
-				\vskip20pt%
+				\vskip30pt %
 			}%
 		\end{flushleft}
 	\end{adjustwidth}
@@ -317,6 +280,13 @@ THE ABSTRACT\vskip12pt}\let\go\relax\fi
 }%
 \fi
 \makeatother
+
+%%========  Bibliography using bibtex ========
+\addto{\captionsenglish}{\renewcommand{\refname}{References}}
+\newcommand{\citeas}[1]{\Needspace*{8\baselineskip}\noindent\bibentry{#1}}
+% Uncomment the next line if you want the  numbered refs to be "1." instead of "[1]".
+%\makeatletter \renewcommand\@biblabel[1]{#1.} \makeatother
+
 
 \titleformat{\section}
 {\large\bfseries\headingfont}
