@@ -1048,4 +1048,363 @@ class ALGSolver:
         
         response = self.llm.generate(
             system_prompt="You are an IMO Gold Medalist solving
+
+                    user_prompt=prompt,
+            temperature=0.3,
+            max_tokens=2000
+        )
         
+        solution_data = self.parser.parse_solution(response)
+        
+        return solution_data
+    
+    def solve(self, problem):
+        """Main solving function"""
+        start_time = time.time()
+        answer = 0
+        confidence = 0.0
+        method = 'unknown'
+        solution_text = ''
+        
+        print('=' * 60)
+        print(f'PROBLEM: {problem[:80]}...')
+        print('=' * 60)
+        
+        try:
+            # Phase 1: Classify problem
+            classification = self.classify_problem(problem)
+            time_budget = classification.get_time_budget()
+            
+            # Check if we should use lemma-based approach
+            use_lemmas = classification.complexity in ['medium', 'hard'] and classification.estimated_lemmas > 2
+            
+            if use_lemmas:
+                # Phase 2: Build lemma graph
+                graph = self.build_lemma_graph(problem, classification)
+                
+                if len(graph.lemmas) > 1:
+                    # Phase 3: Solve via lemmas
+                    method = 'lemma_based'
+                    solution_data = self.solve_via_lemmas(problem, classification, graph)
+                    answer = solution_data.get('answer', 0)
+                    confidence = solution_data.get('confidence', 0.0)
+                    solution_text = solution_data.get('step_by_step_solution', '')
+                else:
+                    # Fallback to direct solution
+                    method = 'direct_fallback'
+                    solution_data = self.solve_directly(problem, classification)
+                    answer = solution_data.get('answer', 0)
+                    confidence = solution_data.get('confidence', 0.0)
+                    solution_text = solution_data.get('mathematical_proof', '')
+            else:
+                # Use direct solution for simple problems
+                method = 'direct'
+                solution_data = self.solve_directly(problem, classification)
+                answer = solution_data.get('answer', 0)
+                confidence = solution_data.get('confidence', 0.0)
+                solution_text = solution_data.get('mathematical_proof', '')
+            
+            # Validate answer
+            if answer is None:
+                answer = 0
+                confidence = 0.0
+                
+        except Exception as e:
+            print(f'[ALG] Error during solving: {e}')
+            traceback.print_exc()
+            answer = 0
+            confidence = 0.0
+            method = 'error'
+        
+        time_taken = time.time() - start_time
+        
+        # Create result
+        result = SolutionResult(
+            problem=problem,
+            classification=classification,
+            answer=answer,
+            success=answer != 0 and confidence > 0.5,
+            time_taken=time_taken,
+            method=method,
+            confidence=confidence,
+            solution_text=solution_text[:500] + '...' if len(solution_text) > 500 else solution_text
+        )
+        
+        print(f'\n[ALG] Result:')
+        print(f'  Answer: {answer}')
+        print(f'  Confidence: {confidence:.2f}')
+        print(f'  Method: {method}')
+        print(f'  Time: {time_taken:.1f}s')
+        print(f'  Success: {result.success}')
+        
+        return result
+
+# ============================================================
+# SERVER MANAGER
+# ============================================================
+
+class ServerManager:
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.server_process = None
+        self.log_file = None
+    
+    def preload_model(self):
+        """Preload model files into memory"""
+        print(f'[SERVER] Preloading model from {self.cfg.model_path}...')
+        start = time.time()
+        
+        # Get all model files
+        model_files = []
+        for root, _, files in os.walk(self.cfg.model_path):
+            for file in files:
+                if file.endswith(('.bin', '.safetensors', '.json', '.txt', '.model')):
+                    model_files.append(os.path.join(root, file))
+        
+        print(f'[SERVER] Found {len(model_files)} model files')
+        
+        # Read files in parallel to preload into cache
+        def read_file(path):
+            try:
+                with open(path, 'rb') as f:
+                    # Read in chunks to avoid memory issues
+                    chunk_size = 1024 * 1024  # 1MB chunks
+                    while True:
+                        chunk = f.read(chunk_size)
+                        if not chunk:
+                            break
+            except Exception as e:
+                print(f'[SERVER] Warning: Could not read {path}: {e}')
+        
+        # Use ThreadPoolExecutor for parallel reading
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            list(executor.map(read_file, model_files))
+        
+        print(f'[SERVER] Model preloaded in {time.time() - start:.1f}s')
+    
+    def start_server(self):
+        """Start vLLM server"""
+        print('[SERVER] Starting vLLM server...')
+        
+        cmd = [
+            sys.executable, '-m', 'vllm.entrypoints.openai.api_server',
+            '--model', self.cfg.model_path,
+            '--served-model-name', self.cfg.served_model_name,
+            '--host', '0.0.0.0',
+            '--port', str(self.cfg.server_port),
+            '--tensor-parallel-size', '1',
+            '--max-model-len', str(self.cfg.context_tokens),
+            '--gpu-memory-utilization', str(self.cfg.gpu_memory_utilization),
+            '--kv-cache-dtype', self.cfg.kv_cache_dtype,
+            '--dtype', self.cfg.dtype,
+            '--max-num-batched-tokens', str(self.cfg.batch_size * 1024),
+            '--disable-log-stats',
+            '--enable-prefix-caching',
+            '--swap-space', '16',
+            '--block-size', '32'
+        ]
+        
+        self.log_file = open('vllm_server.log', 'w')
+        self.server_process = subprocess.Popen(
+            cmd,
+            stdout=self.log_file,
+            stderr=subprocess.STDOUT
+        )
+        
+        return self.server_process
+    
+    def wait_for_server(self, timeout=180):
+        """Wait for server to be ready"""
+        print('[SERVER] Waiting for server to be ready...')
+        
+        start = time.time()
+        client = OpenAI(base_url=f'http://0.0.0.0:{self.cfg.server_port}/v1', 
+                       api_key='sk-local', timeout=10)
+        
+        while time.time() - start < timeout:
+            # Check if process died
+            if self.server_process.poll() is not None:
+                raise RuntimeError(f'Server process died with code {self.server_process.returncode}')
+            
+            try:
+                # Try to list models
+                models = client.models.list()
+                if any(model.id == self.cfg.served_model_name for model in models.data):
+                    print(f'[SERVER] Server ready in {time.time() - start:.1f}s')
+                    return True
+            except Exception:
+                pass
+            
+            time.sleep(1)
+        
+        raise RuntimeError(f'Server not ready after {timeout} seconds')
+    
+    def stop_server(self):
+        """Stop the vLLM server"""
+        if self.server_process:
+            print('[SERVER] Stopping server...')
+            self.server_process.terminate()
+            try:
+                self.server_process.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                self.server_process.kill()
+                self.server_process.wait()
+            self.server_process = None
+        
+        if self.log_file:
+            self.log_file.close()
+            self.log_file = None
+
+# ============================================================
+# KAGGLE INTERFACE FUNCTIONS
+# ============================================================
+
+_solver = None
+_server_manager = None
+
+def initialize_solver():
+    """Initialize the solver and server"""
+    global _solver, _server_manager
+    
+    if _solver is not None:
+        return _solver
+    
+    print('[INIT] Initializing ALG Sequential Solver...')
+    
+    # Create and start server
+    _server_manager = ServerManager(CFG)
+    
+    # Preload model (warm up cache)
+    _server_manager.preload_model()
+    
+    # Start server
+    _server_manager.server_process = _server_manager.start_server()
+    
+    # Wait for server to be ready
+    _server_manager.wait_for_server(CFG.server_timeout)
+    
+    # Initialize solver
+    _solver = ALGSolver(CFG)
+    _solver.initialize()
+    
+    print('[INIT] ALG Solver initialized successfully')
+    return _solver
+
+def predict(id_, question):
+    """Main prediction function for Kaggle"""
+    id_value = id_.item(0) if hasattr(id_, 'item') else id_
+    question_text = question.item(0) if hasattr(question, 'item') else question
+    
+    print('\n' + '='*60)
+    print(f'PROBLEM ID: {id_value}')
+    print('='*60)
+    
+    try:
+        # Initialize solver if needed
+        solver = initialize_solver()
+        
+        # Solve problem
+        result = solver.solve(question_text)
+        
+        # Get answer (ensure it's an integer)
+        answer = int(result.answer) if result.answer is not None else 0
+        
+        # Bound answer to reasonable range
+        if answer < 0 or answer > 99999:
+            print(f'[WARNING] Answer {answer} out of bounds, setting to 0')
+            answer = 0
+        
+        print(f'\nSUBMITTING ANSWER: {answer}')
+        print(f'Confidence: {result.confidence:.2f}')
+        print(f'Method: {result.method}')
+        
+        return pl.DataFrame({'id': [id_value], 'answer': [answer]})
+        
+    except Exception as e:
+        print(f'[ERROR] Prediction failed: {e}')
+        traceback.print_exc()
+        # Return default answer
+        return pl.DataFrame({'id': [id_value], 'answer': [0]})
+
+# ============================================================
+# MAIN EXECUTION
+# ============================================================
+
+if __name__ == '__main__' or True:
+    if os.path.exists('/kaggle'):
+        print('[MAIN] Running on Kaggle platform')
+        
+        # Read reference data
+        ref_path = '/kaggle/input/ai-mathematical-olympiad-progress-prize-3/reference.csv'
+        if os.path.exists(ref_path):
+            import pandas as pd
+            ref_df = pd.read_csv(ref_path, usecols=[0, 1])
+            ref_df.columns = ['id', 'question']
+            test_path = '/kaggle/working/test.csv'
+            ref_df.to_csv(test_path, index=False)
+            print(f'[MAIN] Loaded {len(ref_df)} problems from reference.csv')
+        else:
+            # Create dummy test file
+            test_path = '/kaggle/working/test.csv'
+            pd.DataFrame({'id': [1], 'question': ['Find the value of 2+2']}).to_csv(test_path, index=False)
+            print('[MAIN] Created dummy test file')
+        
+        # Check if we're in competition mode
+        if os.getenv('KAGGLE_IS_COMPETITION_RERUN'):
+            print('[MAIN] Running in competition mode - starting server...')
+            server = kaggle_evaluation.aimo_3_inference_server.AIMO3InferenceServer(predict)
+            server.serve()
+        else:
+            print('[MAIN] Running in local test mode...')
+            try:
+                server = kaggle_evaluation.aimo_3_inference_server.AIMO3InferenceServer(predict)
+                server.run_local_gateway((test_path,))
+            except KeyboardInterrupt:
+                print('\n[MAIN] Interrupted by user')
+            except Exception as e:
+                print(f'[MAIN] Error: {e}')
+                traceback.print_exc()
+            finally:
+                # Cleanup
+                print('[MAIN] Cleaning up...')
+                if _solver and _solver.sandbox:
+                    _solver.sandbox.close()
+                if _server_manager:
+                    _server_manager.stop_server()
+    else:
+        print('[MAIN] Running in standalone mode')
+        
+        # Test with a sample problem
+        sample_problem = "Let $n$ be a positive integer. Find the number of permutations $(a_1, a_2, \ldots, a_n)$ of $(1, 2, \ldots, n)$ such that for all $1 \le i \le n$, $a_i$ is divisible by $i$."
+        
+        print(f'\nTesting with sample problem:')
+        print(f'Problem: {sample_problem[:100]}...')
+        
+        try:
+            # Initialize
+            _server_manager = ServerManager(CFG)
+            _server_manager.preload_model()
+            _server_manager.server_process = _server_manager.start_server()
+            _server_manager.wait_for_server(60)
+            
+            _solver = ALGSolver(CFG)
+            _solver.initialize()
+            
+            # Solve
+            result = _solver.solve(sample_problem)
+            
+            print(f'\nTest Result:')
+            print(f'  Answer: {result.answer}')
+            print(f'  Confidence: {result.confidence:.2f}')
+            print(f'  Method: {result.method}')
+            print(f'  Time: {result.time_taken:.1f}s')
+            
+        except Exception as e:
+            print(f'[ERROR] Test failed: {e}')
+            traceback.print_exc()
+        finally:
+            # Cleanup
+            if _solver and _solver.sandbox:
+                _solver.sandbox.close()
+            if _server_manager:
+                _server_manager.stop_server()
