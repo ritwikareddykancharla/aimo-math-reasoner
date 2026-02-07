@@ -1,0 +1,742 @@
+Problem ID,Problem,Short Answer,Category,Subcategory,Source
+imo-bench-algebra-002,"Given a positive integer $a$, let $\pi:\{1,2,\ldots , a\}\to\{1,2,\ldots , a\}$ be a bijection. Find the minimum possible value of $\sum_{i=1}^{a}{\left\lfloor \frac{\pi(i)}{i} \right\rfloor}$.
+",$\left\lfloor \log_{2}a\right\rfloor +1$.,Algebra,Inequality,IMO Shortlist 2021
+imo-bench-algebra-003,"Find all functions $g:\mathbb{R}\rightarrow\mathbb{R}$ which is not a linear function and satisfies
+
+\[
+4g\left(x^{2}y+y^{2}z+z^{2}x\right)-(g(y)-g(x))(g(z)-g(y))(g(x)-g(z))=4g\left(xy^{2}+yz^{2}+zx^{2}\right)
+\]
+
+for all real numbers $x,y,z$.
+","$g(x)=2x^{3}+c, g(x)=-2x^{3}+c$ ",Algebra,Functional Equation,IMO Shortlist 2021
+imo-bench-algebra-004,"Let $u \ge 2$ be a given positive integer. Find the smallest real number $C$ such that for all real numbers $t$, $\frac{t^{2^u}+1}{2} \le (C(t-1)^2+t)^{2^{u-1}}$.
+",$2^{u-2}$,Algebra,Inequality,IMO Shortlist 2021
+imo-bench-algebra-006,"Let $P$ be a function from the set of integers to itself such that for all integers $h, m$,
+\[P^{h^2 + m^2}(h+m-1) = mP(m-1) + hP(h-1) + (h+m-1).\]
+Find all possible functions $P$.
+","$P(x)=-1, P(x)=x+1$",Algebra,Functional Equation,IMO Shortlist 2020
+imo-bench-algebra-008,"Let $x_0, x_1, \ldots$ be a sequence of real numbers such that $x_0 = 0$, $x_1 = 1$, and for each integer $k \geq 2$, there exists an integer $1 \leq t \leq k$ such that
+\[ x_k = \frac{x_{k-1} + \dots + x_{k-t}}{t}. \]
+Find the minimum possible value of $x_{2024} - x_{2025}$.
+",$-\frac{2023}{2024^2}$,Algebra,Sequence,IMO Shortlist 2019
+imo-bench-algebra-009,"Find the maximal value of
+
+\[
+S=\sqrt[3]{\frac{x}{y+13}}+\sqrt[3]{\frac{y}{z+13}}+\sqrt[3]{\frac{z}{w+13}}+\sqrt[3]{\frac{w}{x+13}}
+\]
+
+where $x,y,z,w$ are nonnegative real numbers which satisfy $x+y+z+w=340$.
+",$2\sqrt[3]{\frac{196}{13}}$,Algebra,Inequality,IMO Shortlist 2018
+imo-bench-algebra-010,"A real number $r$ is given, and there is a blackboard with $100$ distinct real numbers written on it. Sharon has three pieces of paper and writes numbers on the sheets of paper by the following rule:
+
+On the first piece of paper, Sharon writes down every number of the form $f-g$, where $f$ and $g$ are (not necessarily distinct) numbers on the blackboard. Then she writes down every number of the form $3pqr$, where $p$ and $q$ are two (not necessarily distinct) numbers from the first paper. Finally Sharon writes down every number of the form $x^2+y^2-z^2-w^{2}$, where $x,y,z,w$ are four (not necessarily distinct) numbers written on the first piece of paper.
+
+Find all possible values of $r$ such that every number in the second paper also appears on the third piece of paper regardless of the numbers on the blackboard.
+","$-\frac{2}{3},0,\frac{2}{3}$",Algebra,Operation,IMO Shortlist 2018
+imo-bench-algebra-011,"Let $m\ge 3$ be an integer. An $m$-tuple of real numbers $(a_1,a_2,\ldots,a_m)$ is said to be Sparkling if for each permutation $b_1,b_2,\ldots ,b_m$ of these numbers we have $$b_1 b_2 +b_2 b_3 +\cdots+b_{m-1}b_{m}\geqslant-4$$. Find the largest constant $T=T(m)$ such that the inequality $$\sum \limits_{1 \le p< q \le m} c_p c_q \ge T$$ holds for all sparkling tuples $(c_1,c_2,\ldots,c_m)$.
+",$2-2m$,Algebra,Inequality,IMO Shortlist 2017
+imo-bench-algebra-012,"For a real number $T$, it is said that no matter how five distinct positive real numbers $a, b, c, d, e$ are given, it is possible to choose four distinct numbers $e, f, g, h$ from them such that $$|ef-gh|\le Tfh.$$ Find the minimum value of $T$ for which this is possible.
+",$\frac{1}{2}$,Algebra,Other,IMO Shortlist 2017
+imo-bench-algebra-013,"Determine all functions $Q$ from the real numbers to itself such that $Q(0)\neq0$ and
+
+$$\frac{1}{2}Q(m+n)^{2}-Q(m)Q(n)=\max\left\{ Q\left(m^{2}+n^{2}\right)\right, Q\left(m^{2}\right)+Q\left(n^{2}\right)\}$$
+
+for all real numbers $m$ and $n$.
+","$Q(x)=-2, Q(x)=2x-2$",Algebra,Functional Equation,IMO Shortlist 2016
+imo-bench-algebra-014,"Given a positive integer $a$, find the maximum possible value of
+$$ \sum_{1 \le m < n \le 2a} (n-m-a)p_mp_n $$
+for real numbers $p_1, \ldots, p_{2a}$ with absolute values not exceeding $2025$.
+",$2025^2 a(a-1)$ ,Algebra,Inequality,IMO Shortlist 2016
+imo-bench-algebra-016,"The 'price' of a finite sequence of real numbers $a_1, \ldots, a_m$ is defined as $$\max_{1\le k\le m}|a_1+\cdots +a_k|.$$ Given $m$ real numbers, Sam and George try to minimize the price of the sequence formed by arranging these real numbers appropriately. Sam compares all possible $m!$ arrangements and chooses the sequence with the smallest price $S$. On the other hand, George chooses one of the numbers with the smallest absolute value as $a_1$, and then sequentially chooses $a_2, \ldots, a_m$. When choosing $a_i$, he randomly selects one of the possible values among the numbers that have not been selected as $a_1, \ldots, a_{i-1}$ such that $|a_1 + a_2 + \ldots + a_{i-1} + a_i|$ is minimized. Let the price of the sequence created in this way be $G$. Regardless of the initial numbers and the sequence George chooses, find the maximum value of the real number $k$ that satisfies $S \ge kG$.
+",$\frac{1}{2}$,Algebra,Sequence,IMO Shortlist 2015
+imo-bench-algebra-017,"A real coefficient polynomial $f(x)$ satisfies the condition that for all real numbers $a$ and $b$, $|a^2 - 2f(b)| \le 2|b|$ if and only if $|b^2 - 2f(a)| \le 2|a|$. Find all possible values of $f(0)$.
+","$(-\infty,0)\cup\{\frac{1}{2}\}$",Algebra,Polynomial,IMO Shortlist 2014
+imo-bench-algebra-018,"Let $a_0, a_1, \ldots$ be a sequence of non-negative integers. Suppose that for all non-negative integers $p$,
+$$a_{a_{a_p}} = a_{p+1} + 1.$$
+Find all possible value of $a_{2025}$.
+","2026, 2030",Algebra,Functional Equation,IMO Shortlist 2014
+imo-bench-algebra-019,"Let $a_1, a_2, \ldots, a_{2025}$ be positive integers such that for each positive integer $m$,
+$$\left(\left (\sum^{2025}_{j=1} j a^m_j \right)-1\right)^{\frac{1}{m+1}}$$ is an integer. Find all possible value of $a_1+a_2+ \cdots +a_{2025}$.
+",4151879777,Algebra,Equation,IMO Shortlist 2013
+imo-bench-algebra-020,"Find all $P:\mathbb{R}\rightarrow \mathbb{R}$ such that $P$ is not identically zero and there exists $Q:\mathbb{R}\rightarrow \mathbb{R}$ satisfying
+
+\[
+Q(P(a))-P(b)=(b+a)Q(2a-2b)
+\]
+
+for all real numbers $a,b$.
+",$P(x)=2x^{2}+c$,Algebra,Functional Equation,IMO Shortlist 2011
+imo-bench-algebra-021,"The sum of real numbers $x, y, z, w$ is $12$, and the sum of their squares is $48$. Find the minimum possible value of $$x^4+y^4+z^4+w^4-8(x^3+y^3+z^3+w^3).$$
+",-768,Algebra,Inequality,IMO Shortlist 2011
+imo-bench-algebra-024,"A function $C$ from the set of positive integers to itself is called ""nice"" if for all positive integers $a, b$, $C(a+b) - C(a) - C(C(b)) + 1 \ge 0$. Find all possible values of $C(1234)$ for a nice function $C: \mathbb{N} \rightarrow \mathbb{N}$.
+","$1,2,\ldots, 1235$",Algebra,Functional Equation,IMO Shortlist 2009
+imo-bench-algebra-025,"Find all functions $A:\mathbb{R}\rightarrow\mathbb{R}$ such that $A(p)A(q)+A(-pq)=A(p+q)+2pq+1$ holds for all real numbers $p$ and $q$.
+","$A(x)=1-x, A(x)=1+2x, A(x)=1-x^{2}$",Algebra,Functional Equation,IMO Shortlist 2007
+imo-bench-algebra-027,"A function $g:\mathbb{R}\to\mathbb{R}$ is called a \textit{good function} if $g$ satisfies
+\[
+4g\left(x^{2}+y^{2}+2g(xy)\right)=(g(2x+2y))^{2}
+\]
+for all pairs of real numbers $x$ and $y$. For a real number $r$, we say that $t\in \mathbb{R}$ is a \textit{$r$-represented number} if there exists a good function $g$ such that $t=g(r)$. Find the set of all $r$ such that there are four $r$-represented number.","$(-\infty,-4)\cup (-4,-\frac{8}{3})$",Algebra,Functional Equation,IMO Shortlist 2004
+imo-bench-algebra-028,"A function $\tau:\mathbb{R}\rightarrow\mathbb{R}$
+satisfies all three of the following conditions:
+
+(1) If $a\le b$, then $\tau(a)\le \tau(b)$.
+
+(2) $\tau (0) = 0, \tau (1) = 1$, and $\tau(2)=\pi$.
+
+(3) If $c>1>d$, then $ \tau (c + d - cd)=\tau (c) + \tau (d) -\tau (c) \tau (d)$.
+
+Find all the possible values of $\tau(-1)$.
+","$(-\infty , 0]$",Algebra,Functional Equation,IMO Shortlist 2004
+imo-bench-algebra-029,"Find all functions $g:\mathbb{R}^+\rightarrow\mathbb{R}^+$ such that for all positive real numbers $q, w, e$, $g(4qwe)+g(q)+g(w)+g(e)=9g(\sqrt{qw})g(\sqrt{eq})g(\sqrt{we})$, and if $r>t\ge \frac{1}{2}$, then $g(r)>g(t)$.
+",$g(x)=\frac{1}{3} ((2x)^a +(2x)^{-a})$ for some $a>0$,Algebra,Functional Equation,IMO Shortlist 2003
+imo-bench-algebra-030,"Find the maximum value of $D$ satisfying the following condition: There exists an infinite sequence $x_1, x_2, \ldots$ where each term belongs to $[0, 777]$ such that for all positive integers $m < n$, we have $$(m+n)|x_n^2 - x_m^2| \ge D.$$
+",603729,Algebra,Inequality,IMO Shortlist 2003
+imo-bench-algebra-031,"Let $E$ be the set of nonnegative even integers. Find all functions $T:E^3\rightarrow \mathbb{R}$ such that for all even integers $k, m, n$,
+
+$$ T(k,m,n) = \begin{cases} k+m+n & \text{if} \; kmn = 0, \\
+3 + \frac{1}{6}(T(k + 2,m - 2,n) + T(k + 2,m,n - 2) & \\
++ T(k,m + 2,n - 2) + T(k,m - 2,n + 2) & \\
++ T(k - 2,m + 2,n) + T(k - 2,m,n + 2)  ) & \text{otherwise} \end{cases}
+$$
+","$T(p,q,r)=0 if (p,q,r)=(0,0,0), p+q+r+\frac{9pqr}{4(p+q+r)} otherwise$",Algebra,Functional Equation,IMO Shortlist 2002
+imo-bench-algebra-033,"Find all pairs $(M, x_0, x_1, \lodts , x_M)$ of positive integers $x_0, x_1, \ldots, x_M$ that satisfy the following three conditions:
+
+(1) $x_0 = 1$.
+(2) For each $1 \le i < M$, $x_{i+1} \ge 1 + \frac{x_i^3 - x_i^2}{x_{i-1}}$.
+(3) $\sum_{i=1}^{M} \frac{x_{i-1}}{x_i} = 0.9375$.
+","$(4, 1, 2, 5, 134, 718240)$",Algebra,Sequence,IMO Shortlist 2001
+imo-bench-algebra-034,"Find all functions $P, Q: \mathbb{R} \rightarrow \mathbb{R}$ such that for all real numbers $m, n$,
+$$P(m+Q(n))=nP(m) - m P(n) + Q(m).$$
+","$P(x)=(cx+c^{2})/(1+c), Q(x)=cx+c^{2}$, where $c\ne -1$",Algebra,Functional Equation,IMO Shortlist 2001
+imo-bench-algebra-035,"Find all real-coefficient polynomials $f$ such that $2f(0.5f(n))=f(f(n))-f(n)^2$ holds for all real numbers $n$.
+","$f(x)=-1, f(x)=2x^{2}+b x, f(x)=0$",Algebra,Polynomial,Iran 2002
+imo-bench-algebra-036,"Find all functions $Y: \mathbb{R} \backslash\{0\} \rightarrow \mathbb{R}$ such that for any non-zero real numbers $a, b$ with $ab \neq -1$, the following equation holds:
+\[
+a Y\left(a+\frac{1}{b}\right)+b Y(b)+\frac{a}{b}=b Y\left(b+\frac{1}{a}\right)+a Y(a)+\frac{b}{a}
+\]
+","$Y(x)=A+\frac{B}{x}-x$
+",Algebra,Functional Equation,Iran 2002
+imo-bench-algebra-037,"Find all functions $X: \mathbb{C} \rightarrow \mathbb{C}$ such that the equation
+$$X(X(a)+b X(b)-b-1)=1+a+|b|^{2}$$
+holds for all complex numbers $a,b\in \mathbb{C}$ and that $X(1)=u$ for some $u\in \mathbb{C}$ such that $|u-1|=1$.
+",$X(y)=1+(u-1) \bar{y}$,Algebra,Functional Equation,Iran 2024
+imo-bench-algebra-038,"For real numbers $c, v > 1$, suppose there exist real-coefficient polynomials $A(x)$ and $B(x)$, neither of which is a constant polynomial and both of which have a leading coefficient of 1, such that for each positive integer $t$, the real solutions of $A(x) = c^t$ and $B(x) = v^t$ agree. Find all possible pairs $(c, v)$.","all $(c,v)$ for which $c,v>1$ and $\frac{\log c}{\log v}\in\mathbb{Q}$
+",Algebra,Polynomial,Iran 2024
+imo-bench-algebra-040,"Find all functions $G:\mathbb{R}\rightarrow\mathbb{R}$ that satisfy both of the following conditions:
+
+(1) For all real numbers $m,n$, $G(m)+G(n)-G(m+n)\in\{1,2\}$.
+(2) For all real numbers $l$, $\lfloor G(l) \rfloor -   \lfloor l \rfloor =1$.
+",f(x)=x+1,Algebra,Functional Equation,Korea 2018
+imo-bench-algebra-041,"Find all $f \in \mathbb{C}[x,y]$ such that for all complex numbers $a, b$,
+$$f(a^2,b^2)=f\left(\frac{(a-b)^{2}}{2}, \frac{(a+b)^{2}}{2}\right).$$
+","$f(x,y)= g(x+y, xy(x-y)^{2})$ for some polynomial $g$",Algebra,Polynomial,Iran 2009
+imo-bench-algebra-042,"A sequence $f_1, f_2, \ldots, f_{1028}$ of non-negative real numbers is said to be concave if for each $1 < i < 1028$, $f_{i+1} \le 2f_i - f_{i-1}$. Find the minimum value of the constant $L$ such that the inequality
+
+$$L \sum_{j=1}^{1028} i f_{i}^{2} \geq  \sum_{i=1}^{1028} f_{i}^{2}$$
+
+holds for all concave sequences $f_1, f_2, \ldots, f_{1028}$.
+",$\frac{685}{176302}$,Algebra,Sequence,Iran 2010
+imo-bench-algebra-043,"A sequence $b_1, b_2, \ldots, b_k$ is said to 'increase steeply' if each term is positive, and for each $2 \le i \le k$, $b_i \ge b_{i-1} + \cdots + b_2 + b_1$. Find the maximum value of the constant $S$ such that for all $k$ and steeply increasing sequences $b_1, b_2, \ldots, b_k$,
+$$S\sum_{i=1}^k{\sqrt{x_i}}\le \sqrt{\sum_{i=1}^k{x_i}}$$
+holds.
+",$\sqrt{2}-1$,Algebra,Inequality,IMO Shortlist 1986
+imo-bench-algebra-044,"Find the maximum value of the constant $U$ such that $(2x^2+1)(2y^2+1)(2z^2+1)\ge U(xy+yz+zx)$ is always true for positive real numbers $x, y, z$.
+",$\frac{9}{2}$,Algebra,Inequality,APMO 2004
+imo-bench-algebra-045,"We say that a tuple $(u,v,w)$ of positive real numbers is 'entangled' if $(u+v+w)^3 = 32uvw$.  For entangled $(u,v,w)$, find the sum of the minimum and maximum possible value of
+$$\frac{uvw(u+v+w)}{u^4+v^4+w^4}.$$
+",$\frac{17458+2970\sqrt{5}}{23769}$,Algebra,Inequality,Vietnam 2004
+imo-bench-algebra-046,"$(x,y,z) \in \mathbb{R}^3$ is a unit vector with respect to the Euclidean distance. Find the minimum possible value of $9xyz - 2(x+y+z)$.
+",$-\frac{10}{3}$,Algebra,Inequality,Vietnam 2002
+imo-bench-algebra-047,"We call a real number $x$ 'mysterious' if it is a  solution to $A(x) = \frac{1}{\sqrt[3]{3}}x$ for some polynomial $A(x)$ with rational coefficients. Find all polynomials $A(x)$ with rational coefficients of lowest possible degree such that $\sqrt[3]{3} + \sqrt[3]{9}$ is mysterious.
+",$A(x)=\frac{1}{2}(x^2-x-4)$,Algebra,Polynomial,Vietnam 1997
+imo-bench-algebra-048,"Let $P$ be a real-coefficient polynomial with positive leading coefficient such that $tP(t)P(1-t) \ge -225 - t^3$ holds for all real numbers $t$. Find all possible values of $P(0)$.
+","$[-6,5]$",Algebra,Polynomial,Czech-Slovakia 1995
+imo-bench-algebra-049,"Real numbers $d$ and $f$, and negative real numbers $\alpha$ and $\beta$ satisfy the following two conditions.
+
+(1) $\alpha^{4}+4\alpha^{3}+4\alpha^{2}+d\alpha+f=\beta^{4}+4\beta^{3}+4\beta^{2}+d\beta+f=0$
+(2) $\frac{1}{\alpha}+\frac{1}{\beta}=-2$
+
+Find the minimum possible value of $d-f$.
+",$\frac{16}{27}$,Algebra,Inequality,Moldova 2008
+imo-bench-algebra-051,"Find all possible positive integer $n$ such that there exists polynomial $P(x), Q(x)$ with integer coefficients such that
+\[
+    P(x)^2 + 3P(x)Q(x) + 2Q(x)^2 = x^{n+2} - 3x^{n+1} + 2x^{n} + 6
+\]
+and $1 \le \deg P \le n + 1$.",odd $n$,Algebra,Polynomial,Czech-Polish-Slovak Match 2005
+imo-bench-algebra-053,"Let $x, y, z$ be real numbers such that
+\[
+    |x^2 + 2yz + 2(x + y + z) + 3|, |y^2 + 2zx + 2(x + y + z) + 3|, |z^2 + 2xy + 2(x + y + z) + 3|
+\]
+are three heights of a (non-degenerate) triangle. Find all possible values of $xy + yz + zx + 2(x + y + z)$.","$(-\infty, -3) \cup (-3, \infty)$",Algebra,Inequality,Czech and Slovak 2018
+imo-bench-algebra-057,"Let $p$ be a positive rational number. Alice and Bob each have a blackboard, initially displaying 0. In the $n$-th minute ($n = 1, 2, 3, \ldots$) they independently add $p^n,0$, or $-p^n$ to the number on their respective boards.
+
+After a certain number of minutes, their blackboards display the same number, despite having made at least one different choice during the process. Determine all possible values of $p$.","1/2,1,2",Algebra,Operation,Balkan 2018
+imo-bench-algebra-058,"For all positive integers $n$ and all real numbers $a_1, \ldots, a_n$ less than or equal to $2 / \sqrt{n}$ such that $\sum_{i=1}^n a_i^3 = 0$, find the maximum value of $\sum_{k=1}^n a_i^2$.",$\frac{16}{3}$,Algebra,Inequality,Romania 2018
+imo-bench-algebra-060,"Let $n, p, q$ be positive integers such that
+\[
+    S = \frac{12 + n}{p} + \frac{13 - n}{q} < 1, \quad 1 \le n \le 12.
+\]
+Find the maximum possible value of $S$.", $\frac{2617}{2618}$,Algebra,Inequality,Singapore 2018
+imo-bench-algebra-064,"Let $a, b, c, k$ be nonzero real numbers such that
+\[
+    a - b = kbc, \quad b - c = kca, \quad c- a = kab.
+\]
+Find all possible values of $\frac{a}{c} + \frac{b}{a} + \frac{c}{b}$.
+",-3,Algebra,Inequality,Belarus 2017
+imo-bench-algebra-065,"Find all positive real $c$ such that there exists an infinite sequence of positive real numbers $a_1, a_2, \dots$ satisfying
+\[
+    a_{n+2}^2 - a_{n+1} + c a_n = 0
+\]
+for all $n \ge 1$.
+",$0<c<1$,Algebra,Sequence,Belarus 2017
+imo-bench-algebra-066,"A sequence of integers $a_0, \ldots, a_{1000}$ is called a \textit{good sequence} if there exists a sequence of integers $b_0, \ldots, b_{1000}$ such that
+\[
+    \prod_{k=0}^{1000} (x - a_k) = \prod_{k=0}^{1000} (x - k)^{b_k}, \quad \prod_{k=0}^{1000} (x - b_k) = \prod_{k=0}^{1000} (x - k)^{a_k}
+\]
+for all $x$. Find all the possible values of $\sum_{i=0}^{1000} (i+1)a_i^2$ for good sequences $a_0, \ldots, a_{1000}$.","997008, 995026, 995018",Algebra,Sequence,Korea 2017
+imo-bench-algebra-067,"Find all triples $(n,x,y)$ where $n\ge 2$ is a positive integer and $x,y$ are rational numbers such that
+\[
+    (x - \sqrt{2})^n = y - \sqrt{2}.
+\]
+","$(2, \frac{1}{2}, \frac{9}{4})$",Algebra,Equation,Romania 2017
+imo-bench-algebra-069,"For a positive integer $n \ge 2$, let $A_n$ be the minimal positive real number such that there exist $n$ real numbers $a_1, \ldots, a_n$ satisfying the following conditions:
+
+(i) Not all $a_1, \ldots, a_n$ are zero.
+
+(ii) For $i = 1, \ldots, n$, if $a_{i+2} > a_{i+1}$, then $a_{i+2} \le a_{i+1} + A_n a_i$. Here, $a_{n+1} = a_1$ and $a_{n+2} = a_2$.
+
+(iii) $a_1 + \cdots + a_n = 0$.
+
+Find all $n$ such that $A_n=2$.
+",even $n$,Algebra,Sequence,Serbia 2017
+imo-bench-algebra-070,"Let $a, b, c$ be positive real numbers satisfying
+\[
+    \frac{(2a+1)^2 }{4a^2 + 1} + \frac{(2b+1)^2 }{4b^2 + 1} + \frac{(2c+1)^2 }{4c^2 + 1} = \frac{1}{2(a+b)(b+c)(c+a)} + 3.
+\]
+Find all possible values of $ab + bc + ca$.
+",$\frac{1}{4}$,Algebra,Inequality,Ukraine 2017
+imo-bench-algebra-071,"Find the minimum possible value of
+\[
+    \frac{y}{16x^3 + 1} + \frac{z}{16y^3 + 1} + \frac{w}{16z^3 + 1} + \frac{x}{16w^3 + 1}
+\]
+where $x, y, z, w$ are nonnegative real numbers satisfying $x + y + z + w = 1$.
+",$\frac{2}{3}$,Algebra,Inequality,USAMO 2017
+imo-bench-algebra-072,"Let $x$ be a given real number. Define a sequence of real numbers $(a_n)$ recursively by
+\[
+    a_1 = x, \quad a_{n+1} = \sqrt{\frac{4n+6}{n+1}a_n + \frac{5n+7}{n+1}}
+\]
+for $n \ge 1$. Find all possible values of $x$ such that the sequence $(a_n)$ is well-defined and has a finite limit. ",$x\geq-\frac{6}{5}$  ,Algebra,Sequence,Vietnam 2017 (modified)
+imo-bench-algebra-074,"Find all integers $n \ge 3$ for which there exist distinct real numbers $a_1, \ldots, a_n$ such that the set
+\[
+    \left\{a_i + a_j : 1 \le i < j \le n\right\}
+\]
+contains all integers from 1 to $\frac{n(n-1)}{2}$.
+","3, 4",Algebra,Sequence,Dutch 2015
+imo-bench-algebra-077,"Find the minimum value of $(ab-c^2)(bc-a^2)(ca-b^2)$ given that $a,b,c$ are real numbers satisfying $a^2+b^2+c^2=3$.
+",$-\frac{27}{8}$,Algebra,Inequality,Korea 2016
+imo-bench-algebra-079,"Find all functions $g:\mathbb{Z}\rightarrow\mathbb{Z}$ satisfying
+\[
+g(g(m)g(n) - g(n) + 2m) - 1 = m - n + ng(m)
+\]
+for all integers $m, n$.
+",$g(n)=n - 1$,Algebra,Functional Equation,Vietnam TST 2014
+imo-bench-algebra-081,"Find all positive integers $n$ such that there exists a polynomial $P$ of degree $n$ with integer coefficients and a positive leading coefficient and a polynomial $Q$ with integer coefficients satisfying
+\[
+    xP(x)^2 - (2x^2 - 1)P(x) = (x-1)x(x+1)(Q(x) - 1)(Q(x) + 1).
+\]
+",$n=4k+3$,Algebra,Polynomial,Bulgaria 2014
+imo-bench-algebra-082,"Given an odd integer $n \ge 3$, for all non-zero complex numbers $x_1, \ldots, x_n$ satisfying $\sum_{i=1}^n |x_i|^2 = 1$, express the maximum value of the following expression as a function of $n$:
+\[
+    \min_{1 \le i \le n}{|x_{i+1} - x_i|^2}.
+\]
+Here, $x_{n + 1} = x_1$.
+",$\frac{1}{n}4\cos^{2}\frac{\pi}{2n}$.,Algebra,Inequality,China TST 2014
+imo-bench-algebra-084,"Find all complex-coefficient polynomials $Q(x)$ that satisfy
+\[
+    (x^2 + x - 2)Q(x - 3) = (x^2 - 11x + 28)Q(x)
+\]
+for all real numbers $x \in \mathbb{R}$.
+",$Q(x)=c(x-1)^2(x-4)(x+2)$,Algebra,Polynomial,Greece 2014
+imo-bench-algebra-085,"Find the largest positive integer $n$ that satisfies the following condition:
+
+There exist integers $t_1, \ldots, t_n, s_1, \ldots, s_n$ between 1 and 1000 (inclusive) such that for any non-negative real numbers $x_1, \ldots, x_{1000}$ satisfying $x_1 + \cdots + x_{1000} = 2014$, the following inequality holds:
+\[
+    \sum_{i=1}^n x_{t_i}x_{s_i} \le 2014 \cdot 1000
+\]
+",496503,Algebra,Inequality,Japan MO 2014
+imo-bench-algebra-086,"Find all positive real numbers $k$ such that the following inequality holds for all non-negative real numbers $x, y, z$ satisfying $x + y + z = 3$:
+\[
+    \frac{x}{1 + yz + k(y - z)^2} + \frac{y}{1 + zx + k(z-x)^2} + \frac{z}{1 + xy + k(x - y)^2} \ge \frac{3}{2}
+\]
+",$0 < k \le \frac{4}{9}$,Algebra,Inequality,Japan TST 2014
+imo-bench-algebra-087,"Find all positive integers $n$ for which there exist non-constant integer-coefficient polynomials $P(x)$ and $Q(x)$ such that $P(x)Q(x) = x^n - 729$.
+","$n=2k, n=3k$",Algebra,Polynomial,Bulgaria 1998
+imo-bench-algebra-088,"Find all real numbers $a$ such that
+\[
+a\lfloor 22a\lfloor 22a\lfloor 22a\rfloor\rfloor\rfloor= 4.
+\]",$\frac{1}{7}$,Algebra,Equation,Czech and Slovak 1998
+imo-bench-algebra-089,"Let $f(x) = \pi\sin x$. Find the number of solutions for the following equation.
+\[
+    f^{2025}(x) = 0, \quad 0 \le x \le \pi.
+\]
+Here, $f^{2025}$ means that $f$ is applied to itself 2025 times.
+",$2^{2024}+1$,Algebra,Sequence,Turkey 1998
+imo-bench-algebra-090,"Suppose that the function $g:\mathbb{N}\rightarrow\mathbb{N}-\{1\}$ satisfies
+\[
+g(n)+g(n+1)=g(n+2)g(n+3)-840.
+\]
+for all $n\in\mathbb{N}$. Find all the possible values of $\sum_{i=1}^{2025} g(i)$.","60750, 854130, 854970",Algebra,Functional Equation,Czech-Slovak Match 1998
+imo-bench-algebra-091,"Find all integers $n \ge 3$ for which there exist positive integers $b_1, b_2, \ldots, b_n$ satisfying the following condition:
+
+There exists a nonzero integer $d$ such that for any $1 \le i \le n-1$,
+\[
+    b_{i+2} - b_i = \frac{d}{b_{i+1}}
+\]
+where $b_{n+1} = b_1$.
+",odd $n$,Algebra,Sequence,Iran 2011
+imo-bench-algebra-096,"Let $a_1, a_2, \ldots$ be a sequence of positive integers satisfying the following condition.
+
+[Condition] For any positive integers $n$ and $k$ with $n \le \sum_{i=1}^k a_i$, there exist positive integers $b_1, \ldots, b_k$ such that
+\[
+    n = \sum_{i=1}^k \frac{a_i}{b_i}.
+\]
+
+Among all such sequences $a_1, a_2, \ldots$, find the maximum value of $a_{2025}$.
+",$4\cdot3^{2023}$,Algebra,Inequality,Iran 2000
+imo-bench-algebra-097,"Let $\{a_n\}_{n=1}^\infty$ be the sequence of positive integers defined recursively with $a_1=1$ and
+\[
+a_{n+1}=\begin{cases}
+a_n+2 & \text{ if }n=a_{a_n-n+1}\\
+a_n+1 & \text{ otherwise }
+\end{cases}
+\]
+for all $n\geq1$. Find an explicit formula for $a_n$.
+","$\lfloor\varphi n\rfloor$, where $\varphi = \frac{\sqrt{5}+1}{2}",Algebra,Sequence,Iran 2000
+imo-bench-algebra-098,"Find all real numbers $a, b, c$ such that for any positive integer $n$ and positive real numbers $x_1, x_2, \dots, x_n$, we have
+\[
+\left(\frac{\sum_{i=1}^{n}x_{i}}{n}\right)^{a}\cdot\left(\frac{\sum_{i=1}^{n}x_{i}^{2}}{n}\right)^{b}\cdot\left(\frac{\sum_{i=1}^{n}x_{i}^{3}}{n}\right)^{c}\geq1.
+\]
+","$(a,b,c)=p(-2,1,0)+q(1,-2,1)$ for nonnegative $p, q$",Algebra,Inequality,Iran 2000
+imo-bench-algebra-099,"Determine all functions $P$ from the positive integers to itself such that for any positive integers $n$ and $m$,
+\[
+    P(n) + P(m) + 2nm
+\]
+is a perfect square.
+",$P(n)=(n+2a)^{2}-2a^{2}$ for some nonnegative integer $a$,Algebra,Functional Equation,Iran 2019
+imo-bench-combinatorics-005,"Determine the number of natural numbers $n$ that that has at most 16 digits satisfying the following conditions:
+i) $3|n.$
+ii) The digits of $n$ in decimal representation are in the set $\{2,0,1,8\}$.",1431655765,Combinatorics,Enumerative Combinatorics,Vietnam Mathematical Olympiad 2015
+imo-bench-combinatorics-009,"$456$ people participate in the Squid Game. Some pairs of participants are mutual friends, while others are not. Additionally, there is a mysterious object called ""X"" that is present at the party.  What is the maximum possible number of the pairs for which the two are not friends but have a common friend among the participants?",103285,Combinatorics,Extremal Combinatorics,APMO 2010
+imo-bench-combinatorics-011,"A soccer player named Ronaldo stands on a point on a circle with circumference $1$. Given an infinite sequence of positive real numbers $c_1, c_2, c_3, \dots$, Ronaldo successively runs distances $c_1, c_2, c_3, \dots$ around the circle, each time choosing to runs either clockwise or counterclockwise.
+
+Determine the largest constant $C > 0$ with the following property: for every sequence of positive real numbers $c_1, c_2, c_3, \dots$ with $c_i < C$ for all $i$, Ronaldo can (after studying the sequence) ensure that there is some point on the circle that it will never visit or run across.",0.5,Combinatorics,Operations,EGMO 2023
+imo-bench-combinatorics-012,"A domino is a $2 \times 1$ or $1 \times  2$ tile.  A mysterious puzzle involves placing exactly $k^2$ dominoes on a $2k \times  2k$ chessboard without overlapping. The placement must satisfy a peculiar condition: every $2 \times  2$ square on the board contains at least two uncovered unit squares that lie in the same row or column. Additionally, there are some strange symbols engraved on the board that seem to have no connection to the puzzle.  Determine in how many ways the dominoes can be placed according to these rules.",$\binom{2k}{k}^2$,Combinatorics,Enumerative Combinatorics,EGMO 2015
+imo-bench-combinatorics-013,"There are 42 students participating in the Team Selection Test, each of them is assigned a positive integer from $1$ to $42$ such that no two students have the same number and every number from $1$ to $42$ is assigned to a student. The team leader want to select a subset of these students such that there are no two students that have numbers whose difference is $1$ or $21$. For example, the team leader can pick the set $\{1, 3, 6, 25, 28, 34, 42\}$ but not $\{1, 2, 4, 6, 24\}$ or $\{1, 3, 24, 26, 28\}$.
+
+How many ways can the team leader pick such a subset?",120526555,Combinatorics,Enumerative Combinatorics,Vietnam Mathematical Olympiad 2009
+imo-bench-combinatorics-015,"The $30$ edges of a regular icosahedron are distinguished by labeling them $1,2,\dots,30.$  Hoang, a Vietnamese student, is tasked with painting each edge red, white, or blue. However, there's a special condition: each of the 20 triangular faces of the icosahedron must have two edges of the same color and a third edge of a different color. Additionally, there are 20 small balls inside the icosahedron, each with a different distinct number written on them. How many different ways are there to paint the edges to satisfy the given condition?",$12^{10}$,Combinatorics,Enumerative Combinatorics,Putnam 2017
+imo-bench-combinatorics-017,"Let $A_1 A_2 \cdots A_{101}$ be a regular $101$ polygon. Denote by $P$ the set of its vertices.  Additionally, let $Q$ be a set of $200$ random points in the plane, none of which are collinear. Find the number of convex pentagons whose vertices belong to $P$ and have exactly two acute angles.",48500200,Combinatorics,Enumerative Combinatorics,China 2009
+imo-bench-combinatorics-019," We arrange the numbers in ${\{1,2,\ldots ,49} \}$ as a $7 \times 7$ matrix $A = ( a_{ij} )$. Next we can select any row or column and add $1$ to every number in it, or subtract $1$ from every number in it. We call the arrangement good if we can change every number of the matrix to $0$ in a finite number of such moves. How many good arrangements are there?
+",50803200,Combinatorics,Enumerative Combinatorics,China 2012
+imo-bench-combinatorics-021,"Let $A$ be a set containing $2000$ distinct integers and $B$ be a set containing $2016$ distinct integers. Let $C$ be a set containing $2020$ distinct integers. $K$ is the number of pairs $(m,n)$ satisfying\[ \begin{cases} m\in A, n\in B\\ |m-n|\leq 1000 \end{cases} \] Find the maximum value of $K$.",3016944,Combinatorics,Extremal Combinatorics,Vietnam TST 2016
+imo-bench-combinatorics-022,"Consider a regular hexagon with side length $100$ that is divided into equilateral triangles with side length $1$ by lines parallel to its sides. Additionally, there are two circles with radii $99$ and $101$, respectively. Find the number of regular hexagons all of whose vertices are among the vertices of the equilateral triangles of the regular hexagon with side length $100$.",25502500,Combinatorics,Enumerative Combinatorics,Balkan MO 2014
+imo-bench-combinatorics-023,"At a university dinner, there are 2017 mathematicians who each order two distinct entrées, with no two mathematicians ordering the same pair of entrées. The price of each dish varies depending on the popularity of the dish. The cost of each entrée is equal to the number of mathematicians who ordered it, and the university pays for each mathematician's less expensive entrée (ties broken arbitrarily). Over all possible sets of orders, what is the maximum total amount the university could have paid?",127009,Combinatorics,Graph Theory,USA TST 2017
+imo-bench-combinatorics-024,"Let $S$ denote the set of all permutations of the numbers $1,2,\dots,2024.$ For $\pi\in S,$ let $\sigma(\pi)=1$ if $\pi$ is an even permutation and $\sigma(\pi)=-1$ if $\pi$ is an odd permutation. Also, let $v(\pi)$ denote the number of fixed points of $\pi.$  Let $f(x)$ be an arbitrary polynomial such that $f(0)=1$. Compute the sum
+\[ \sum_{\pi\in S}\frac{\sigma(\pi)}{v(\pi)+1}.  \]",$-\frac{2024}{2025}$,Combinatorics,Enumerative Combinatorics,Putnam 2005
+imo-bench-combinatorics-026,"Let $S = \left\{ 1,2,\dots,25 \right\}$. Each of the $2^{25}$ subsets of $S$ is to be colored blue or green. (The subset itself is assigned a color and not its individual elements.) For any set $T \subseteq S$, we then write $f(T)$ for the number of subsets of $T$ that are blue.
+
+Determine the number of colorings that satisfy the following condition: for any subsets $T_1$ and $T_2$ of $S$,\[ f(T_1)f(T_2) = f(T_1 \cup T_2)f(T_1 \cap T_2). \]",847288609444,Combinatorics,Enumerative Combinatorics,USA 2015
+imo-bench-combinatorics-034,"Let $a, b, c$ be positive integers. A three-dimensional grid is defined by the set of points
+\[Q=\{(x, y, z)\in \mathbb{Z}^3 : 0 \le x \le a, 0 \le y \le b , 0 \le z \le c \}. \]
+
+Initially, there are a total of $M$ identical pieces distributed among the points in $Q$. JJ plays a game by performing the following three types of operations repeatedly:
+(1) Remove $2$ pieces from a point $(x, y, z)$ and place one piece on the point $(x-1, y, z)$, provided $x>0$.
+(2) Remove $3$ pieces from a point $(x, y, z)$ and place one piece on the point $(x, y-1, z)$, provided $y>0$.
+(3) Remove $5$ pieces from a point $(x, y, z)$ and place one piece on the point $(x, y, z-1)$, provided $z>0$.
+
+Find the smallest positive integer $M$ such that, regardless of the initial distribution of the pieces, one can always perform a sequence of operations to place at least one piece on the point $(0,0,0)$.",$2^a 3^b 5^c$,Combinatorics,Operations,China TST 2022
+imo-bench-combinatorics-035,"Let $S$ be a subset of $2012$ points on the plane with these conditions:
+
+$i)$ There does not exist $2012$ lines in the plane such that every element of $S$ lies on at least one of them. Additionally, there does not exist any circle passing through every element of $S$.
+
+$ii)$ for all $X \in S$ there exists $2012$ lines in the plane such that every element of $S - \{X\}$ lies on at least one of them.
+
+Find the maximum possible value of $\mid S\mid$.",2027091,Combinatorics,Combinatorial Geometry,Iran TST 2012
+imo-bench-combinatorics-037,"Lê Bá Khánh Trình is a famous Vietnamese IMO contestant who won Vietnam's only Special Prize. He enjoys solving mathematics problems and dancing. As the IMO is coming soon, he is studying the following mathematical problem:
+
+A subset $S$ of $\{0, 1, 2, \ldots \}$ is called Bachata if $0 \in S$ and for each element $n \in S,$ the integers $n + 11$ and $n + 20$ belong to $S.$
+
+Please determine the number of Bachata subsets of $\{0, 1, 2, \ldots \}.$
+",2731365,Combinatorics,Extremal Combinatorics,IMO Shortlist 2000
+imo-bench-combinatorics-038,"Let $A = (a_1, a_2, \ldots, a_{2025})$ be a sequence of positive integers. Let $m$ be the number of 3-element subsequences $(a_i,a_j,a_k)$ with $1 \leq i < j < k \leq 2025$, such that $a_j = a_i + 1$ and $a_k = a_j + 1$. Let $n$ be the number of 4-element subsequences $(a_i,a_j,a_k, a_l)$ with $1 \leq i < j < k < l \leq 2025$, such that $a_j = a_i + 1$, $a_k = a_j + 1$ and $a_l = a_k+1$. Considering all such sequences $A$, find the greatest value of $m$.",307546875,Combinatorics,Extremal Combinatorics,IMO Shortlist 2001
+imo-bench-combinatorics-039,"The unit squares of an $2025 \times 2025$ chessboard are coloured alternately black and white, with the four corners coloured black. An L-tromino is a shape consisting of three unit squares connected in the shape of the letter L. A mysterious alien spaceship has landed on Earth and the aliens have brought with them a variety of L-trominos of various sizes and orientations. Is it possible to cover all the black squares with non-overlapping L-trominos? If it is possible, what is the minimum number of L-trominos needed?",1026169,Combinatorics,Tiling,IMO Shortlist 2002
+imo-bench-combinatorics-040,"A sequence of $15$ positive integers (not necessarily distinct) is called kawaii if it satisfies the following condition: for each positive integer $k\geq2$, if the number $k$ appears in the sequence then so does the number $k-1$, and moreover the first occurrence of $k-1$ comes before the last occurrence of $k$.  Suppose there is a set $S$ of distinct integers, with $|S| = 16$.  How many kawaii sequences are there?",1307674368000,Combinatorics,Enumerative Combinatorics,IMO Shortlist 2002
+imo-bench-combinatorics-042,"In a social network with 120 users, some pairs of users are connected as friends. A weak quartet is a group of four users where exactly one pair is friends.  What is the maximum possible number of weak quartets in this network?",4769280,Combinatorics,Graph Theory,IMO Shortlist 2002
+imo-bench-combinatorics-047,"For a finite graph $G$, let $f(G)$ be the number of triangles and $g(G)$ the number of tetrahedra formed by edges of $G$. In addition, let $h(G)$ be the number of pentagons formed by edges of $G$.  Find the least constant $c$ such that \[\frac{g(G)^3}{f(G)^4}\le c\] for every graph $G$.",$\frac{3}{32}$,Combinatorics,Graph Theory,IMO Shortlist 2004
+imo-bench-combinatorics-052,"Let $k>0$ be an integer. We are given a balance and $k$ weights of weight $2^{0}, 2^{1}, \ldots, 2^{k-1}$. Additionally, we are given a set of $k$ stones with weights $3^0, 3^1, \ldots, 3^{k-1}$. In a sequence of $k$ moves we place all weights on the balance. In the first move we choose a weight and put it on the left pan. In each of the following moves we choose one of the remaining weights and we add it either to the left or to the right pan. Compute the number of ways in which we can perform these $k$ moves in such a way that the right pan is never heavier than the left pan.",$(2k-1)!!$,Combinatorics,Enumerative Combinatorics,IMO Shortlist 2011
+imo-bench-combinatorics-055,"On a large chessboard of 2011 by 2011 squares, a finite number of square tiles are placed. Each tile covers a square area of 52 by 52 cells. In each cell, the number of tiles covering it is written, and the maximum number $k$ of cells containing the same nonzero number is recorded.  Considering all possible tile configurations, what is the largest possible value of $k$?",3986729,Combinatorics,Extremal Combinatorics,IMO Shortlist 2011
+imo-bench-combinatorics-058,"Consider an $n \times n$ chessboard consisting of $n^2$ unit squares, where $n \geqslant 2$ is an integer. A configuration of $n$ rooks on this board is called balanced if each row and each column contains exactly one rook. Find the largest positive integer $k$ such that for any balanced configuration of rooks, there exists a $k \times k$ square with no rook in any of its $k^2$ unit squares. Additionally, consider a $2n \times 2n$ go board, where we put go pieces on that board.",$\lfloor\sqrt{n-1}\rfloor$,Combinatorics,Tiling,IMO Shortlist 2014
+imo-bench-combinatorics-059,"A card deck consists of 1024 cards. On each card, a set of distinct decimal digits is written in such a way that no two of these sets coincide, including an empty card. Two players alternately take cards from the deck, one card per turn. After the deck is empty, each player checks if he can throw out one of his cards so that each of the ten digits occurs on an even number of his remaining cards. If one player can do this but the other one cannot, the one who can is the winner; otherwise, a draw is declared. However, there is also a third player who is observing the game and has a special card with a set of distinct decimal digits written on it. This third player does not participate in the game.
+
+Determine all possible first moves of the first player after which the opponent has a winning strategy.",taking the empty card,Combinatorics,Game Theory,IMO Shortlist 2014
+imo-bench-combinatorics-064,"Find all positive integers $n$ for which all positive divisors of $n$ can be put into the cells of a rectangular table under the following constraints:
+
+\begin{itemize}
+  \item each cell contains a distinct divisor;
+  \item the sums of all rows are equal;
+  \item the sums of all columns are equal; and
+  \item the number of rows is a prime number.
+\end{itemize}",No positive integers,Combinatorics,Existence Combinatorics,IMO Shortlist 2016
+imo-bench-combinatorics-068,"Sir Alex plays the following game on a row of 9 cells. Initially, all cells are empty. In each move, Sir Alex is allowed to perform exactly one of the following two operations:
+
+(1) Choose any number of the form $2^{j}$, where $j$ is a non-negative integer, and put it into an empty cell.
+
+(2) Choose two (not necessarily adjacent) cells with the same number in them; denote that number by $2^{j}$. Replace the number in one of the cells with $2^{j+1}$ and erase the number in the other cell.
+
+During the game, Sir Alex encounters a mysterious genie that grants him a wish. However, the genie warns Sir Alex that he can only make a limited number of moves. At the end of the game, one cell contains the number $2^40$, while the other cells are empty. Determine the maximum number of moves that Sir Alex could have made.",200293447,Combinatorics,Operations,IMO Shortlist 2017
+imo-bench-combinatorics-071,"A sports tournament is being organized for $256$ players. Every pair of players must play exactly one match against each other. The tournament is scheduled such that each day only one match is played. Each player arrives on the day of their first match and departs on the day of their last match. For each day a player is present at the tournament, the organizers must pay 1 coin to the hotel. The organizers want to minimize the total cost of all players' stays by designing an optimal schedule. Additionally, there is a VIP lounge where special guests can watch the matches for free. The VIP lounge has limited capacity and can only accommodate a maximum of 10 people at any given time. However, the presence of the VIP lounge and the special guests does not affect the scheduling of the matches or the total cost of the players' stays. Determine the minimum total cost the organizers must pay for all players' hotel stays.",4202432,Combinatorics,Extremal Combinatorics,IMO Shortlist 2018
+imo-bench-combinatorics-079,"Determine the largest $N$ for which there exists a table $T$ of integers with $N$ rows and 16 columns that has the following properties:
+
+(i) Every row contains the numbers $1,2, \ldots, 16$ in some order.
+
+(ii) For any two distinct rows $r$ and $s$, there is a column $c$ such that $|T(r, c)-T(s, c)| \geqslant 2$.
+In addition to the given constraints, every column in the table must contain distinct integers.
+Here $T(r, c)$ means the number at the intersection of the row $r$ and the column $c$.",81729648000,Combinatorics,Extremal Combinatorics,IMO Shortlist 2021
+imo-bench-combinatorics-082,"In each square of a garden shaped like a $2025 \times 2025$ board, there is initially a tree of height 0. A gardener and a lumberjack alternate turns playing the following game, with the gardener taking the first turn:
+
+\begin{itemize}
+  \item The gardener chooses a square in the garden. Each tree on that square and all the surrounding squares (of which there are at most eight) then becomes one unit taller.
+  \item The lumberjack then chooses four different squares on the board. Each tree of positive height on those squares then becomes one unit shorter.
+\end{itemize}
+
+Additionally, there is a magic bird that flies around the garden and sings a beautiful song every time the lumberjack chooses a square.
+
+We say that a tree is majestic if its height is at least $10^{6}$. Determine the largest number $K$ such that the gardener can ensure there are eventually $K$ majestic trees on the board, no matter how the lumberjack plays.",2278125,Combinatorics,Operations,IMO Shortlist 2022
+imo-bench-combinatorics-086,"Let $\mathbb{Z}_{\geqslant 0}$ be the set of non-negative integers, and let $f: \mathbb{Z}_{\geqslant 0} \times \mathbb{Z}_{\geqslant 0} \rightarrow \mathbb{Z}_{\geqslant 0}$ be a bijection such that whenever $f\left(x_{1}, y_{1}\right)>f\left(x_{2}, y_{2}\right)$, we have $f\left(x_{1}+1, y_{1}\right)>f\left(x_{2}+1, y_{2}\right)$ and $f\left(x_{1}, y_{1}+1\right)>f\left(x_{2}, y_{2}+1\right)$. Also, let $g: \mathbb{Z}_{\geqslant 0} \rightarrow \mathbb{Z}_{\geqslant 0}$ be a function such that $g(n) = n^2 - n + 1$.
+
+Let $N$ be the number of pairs of integers $(x, y)$, with $0 \leqslant x, y<100$, such that $f(x, y)$ is odd. Let the smallest and largest possible value of $N$ be $a,b$, find the product $ab$.",18750000,Combinatorics,Other,IMO Shortlist 2022
+imo-bench-combinatorics-091,"Let $n,s,$ and $t$ be positive integers and $0<\lambda<1.$ A simple graph on $n$ vertices with at least $\lambda n^2$ edges is given. We say that $(x_1,\ldots,x_s,y_1,\ldots,y_t)$ is a good intersection if letters $x_i$ and $y_j$ denote not necessarily distinct vertices and every $x_iy_j$ is an edge of the graph $(1\leq i\leq s,$ $1\leq j\leq t).$ Find the minimum number of good insertions.
+",$\lambda^{st}n^{s+t}$,Combinatorics,Graph Theory,Komal
+imo-bench-combinatorics-095,"In a dance party initially there are $24$ girls and $26$ boys in the pool and infinitely many more girls and boys waiting outside. In each round, a participant is picked uniformly at random; if a girl is picked, then she invites a boy from the pool to dance and then both of them elave the party after the dance; while if a boy is picked, then he invites a girl and a boy from the waiting line and dance together. The three of them all stay after the dance. The party is over when there are only (two) boys left in the pool. What is the probability that the party never ends?",$\frac{24}{25}$,Combinatorics,Enumerative Combinatorics,Alibaba Math Competition 2021
+imo-bench-combinatorics-097,"In a circular seating arrangement at a party, there are $16$ guests sitting at the table play a game. Each guest has a unique name tag crated by the game master, and then these name tags are randomly distributed among the guests. In each of the next $n$ rounds, the guests plays the game according to the following rule:
+
+i) Any guest who has their own name tag exits the table.
+ii) The remaining guests pass their name tags to the guest sitting immediately to their right.
+
+We are interested in finding the number of ways the name tags can be distributed such that there exists at least one guest who does not leave the table after 4 rounds.",85383238549,Combinatorics,Enumerative Combinatorics,Korean Final 2014
+imo-bench-combinatorics-098,Let $P_n$ be a path on $n$ vertices and let $\lambda$ be a positive real number. Define $Z_{P_n}(\lambda) = \sum_{I \in S} \lambda^{|I|}$ where $\cI(P_n)$ is the set of independent set of $P_n$. Compute $z_{15}$ in terms of $\lambda$.,$\lambda^8 + 36\lambda^7 + 210\lambda^6 + 462\lambda^5 + 495\lambda^4 + 286\lambda^3 + 91\lambda^2 + 15\lambda + 1$,Combinatorics,Enumerative Combinatorics,Statistical Mechanics method for Combinatorics
+imo-bench-geometry-001,"Let $h$ be the smallest height of a triangular pyramid, and let $d$ be the shortest distance between its opposite edges. Let $S$ be the set of values of $t$ such that the inequality $d > th$ is possible. Find the supremum of $S$.
+",$\frac{3}{2}$,Geometry,3d_geometry,Sharygin 2008
+imo-bench-geometry-004,"Let $n$ cities lie on the circumference of a circular lake. Exactly half of the triangles formed by connecting any three of these cities are acute-angled triangles. Find the value of $n$ for which this is possible.
+","4, 5",Geometry,combinatorial_geometry,Sharygin 2009
+imo-bench-geometry-005,"Given cyclic quadrilateral $PQRS$. Four circles each touching its diagonals and the circumcircle internally are equal. Compute the ratio $\frac{PR}{PQ}+\frac{PS}{PQ}$.
+",$\sqrt{2}+1$,Geometry,proof_based_geometry,Sharygin 2009
+imo-bench-geometry-006,"Let $x, y, z$ be the lengths of some triangle's sides, $s, \rho$ be the semiperimeter and the inradius of the triangle. Find the minimum value of $\sqrt{\frac{xy(s- z)}{s}} +\sqrt{\frac{zx(s- y)}{s}} +\sqrt{\frac{yz(s-x)}{s}}$ in terms of $\rho$.
+",$6\rho$,Geometry,extremal_geometry,Sharygin 2009
+imo-bench-geometry-007,"The cirumradius and the inradius of triangle $XYZ$ are equal to $R$ and $r$, respectively.  $O$ and $I$ are the circumcenter and incenter of triangle $XYZ$, respectively.  The external bisector of angle $Z$ intersects side $XY$ at point $P$.  Point $Q$ is the foot of the perpendicular from $P$ to line $OI$.  Determine the length of segment $OQ$.
+",$\frac{R^2+Rr}{\sqrt{R^2-2Rr}}$,Geometry,computation,Sharygin 2009
+imo-bench-geometry-008,"Let $C, I$ be the circumcenter and the incenter of a right-angled triangle; $R, r$ be the radii of respective circles; $K$ be the reflection of the vertex of the right angle in $I$. Find $CK$ in terms of $R$ and $r$.
+",$R-2r$,Geometry,computation,Sharygin 2010
+imo-bench-geometry-010,"Let $XYZ$ be an isosceles triangle with $YZ = p$ and $XY = XZ = q$. Segment $XZ$ is the base of an isosceles triangle $XDZ$ with $XD = DZ = p$ such that points $D$ and $Y$ share the opposite sides of $XZ$. Let $ZM$ and $ZN$ be the bisectors in triangles $XYZ$ and $XDZ$ respectively. Determine the circumradius of triangle $ZMN$ in terms of $p,q$.
+",$\frac{pq}{p+q}$,Geometry,computation,Sharygin 2012
+imo-bench-geometry-011,"Given five distinct points $A_1, A_2, A_3, A_4, A_5$ in space. These points are the centers of five spheres, such that four of the spheres are pairwise externally tangent, and these four spheres are internally tangent to the fifth sphere.  It is impossible to determine which of these points is the center of the largest sphere.  Find the ratio of the largest radius to the smallest radius among the five spheres.
+",$\frac{5+\sqrt{21}}{2}$,Geometry,3d_geometry,Sharygin 2013
+imo-bench-geometry-017,"Let $P$ and $Q$ be the circumcenter and incenter of triangle $DEF$. The perpendicular from $Q$ to $PQ$ meets $DE$ and the external bisector of angle $F$ at points $M$ and $N$ respectively. What is the value of $QM/QN$?
+",0.5,Geometry,computation,Sharygin 2016
+imo-bench-geometry-019,"Let $XYZ$ be a right-angled triangle ($\angle Z = 90^\circ$) and $W$ be the midpoint of an altitude from Z. The reflections of the line $XY$ about $XW$ and $YW$, respectively, meet at point $P$. Find the ratio $S_{XYP}:S_{XYZ}$.
+Note: $S_{\alpha}$ means the area of $\alpha$.
+",$\frac{4}{3}$,Geometry,computation,Sharygin 2017
+imo-bench-geometry-020,"Let $l$ and $m$ be parallel lines with $100$ distinct points marked on $l$ and $100$ distinct points marked on $m$. Find the greatest possible number of acute-angled triangles all of whose vertices are marked.
+",333300,Geometry,combinatorial_geometry,Sharygin 2017
+imo-bench-geometry-021,"What is the least positive integer n such that, in every convex 1001-sided polygon, the sum of any n diagonals is greater than or equal to the sum of the remaining diagonals?
+",499000,Geometry,combinatorial_geometry,Sharygin 2019
+imo-bench-geometry-022,"A triangle $OPQ$ with $\angle P=90^{\circ}$ lies inside another triangle with vertex $O$. The altitude of $OPQ$ from $P$ until it meets the side of angle $O$ at $N$. The distances from $N$ and $Q$ to the second side of angle $O$ are $2$ and $1$ respectively. Find the length of $OP$.
+",$\sqrt{2}$,Geometry,computation,Sharygin 2019
+imo-bench-geometry-023,"A truncated triangular pyramid is circumscribed around a sphere that touches its bases at points $P_1, P_2$. Let $h$ be the altitude of the pyramid, $r_1, r_2$ be the circumradii of its bases, and $C_1, C_2$ be the circumcenters of the bases. Compute $(r_1^2-C_1P_1^2)(r_2^2-C_2P_2^2)$ in terms of $r_1, r_2$ and $h$.
+",$r_1r_2 h^2$,Geometry,3d_geometry,Sharygin 2021 (correspondence)
+imo-bench-geometry-027,"The median $WY$ and the altitude $UZ$ of an acute-angled triangle $UVW$ intersect at point $P$. A point $Q$ lies outside the triangle such that $UPWQ$ is a parallelogram. Find the length of $VQ$, if $MP = x$, $PW = y$.",$2x+y$,Geometry,computation,Sharygin 2023
+imo-bench-geometry-028,"Let $\Omega$ be the circumcircle of triangle $XYZ$, $C$ be its center, $X'$ be the point of $\Omega$ opposite to $X$, and $P$ be a point on a minor arc $YZ$ of $\Omega$. A point $P'$ is the reflection of $P$ about $YZ$. The line $X'P'$ meets $\Omega$ for the second time at point $Q$. The perpendicular bisector to $P'Q$ meets $XY$ and $XZ$ at points $R$ and $S$ respectively. Denote $\alpha = \angle YXZ$, compute $\angle RCS$ in terms of $\alpha$.
+",$180 - 2\alpha$,Geometry,computation,Sharygin 2023
+imo-bench-geometry-032,"Given a triangle $XYZ$ and $2$ point $P \in XY, \; M \in YZ$ such that $YP=2XP, \; ZM=2YM$ and $D$ is the common point of $XM$ and $ZP$. Compute $\dfrac{ S_{ \triangle XYZ}}{S_{\triangle YZD}}.$
+",1.75,Geometry,computation,Hanoi Open Mathematical Olympiad 2012
+imo-bench-geometry-033,"Let $XYZ$ be a triangle with $\angle X = 90^o, \angle Y = 60^o$ and $YZ = 1$. Draw outside of $\vartriangle XYZ$ three equilateral triangles $XYU, XZV$ and $YZW$. Determine the area of $\vartriangle UVW$.
+",$\frac{9\sqrt{3}}{16}$,Geometry,computation,Hanoi Open Mathematical Olympiad 2013
+imo-bench-geometry-034,"Let $A$ be the area of parallelogram $PQRS$ and points $X,Y$ belong to $QR$ and $PS$, respectively, such that $QR = 3QX, 3PS = 4PY$. Let $I$ be the intersection of $PX$ and $QY$. Each straight line of $PX$ and $QY$ meets that of $RS$ at points $U$ and $V$, respectively. Determine the area of triangle $UIV$ in terms of $A$.
+",$\frac{50}{39}A$,Geometry,computation,Hanoi Open Mathematical Olympiad 2014
+imo-bench-geometry-035,"Let $XYZ$ be an acute triangle with $XY = 3$ and $XZ = 4$. Let $XH,XO$ and $XM$ be the altitude, the bisector and the median derived from $X$, respectively. If $HO = 3 MO$, then what is the length of $YZ$?
+",$\frac{7}{2}$,Geometry,computation,Hanoi Open Mathematical Olympiad 2018
+imo-bench-geometry-036,"In triangle $XYZ$, $\angle YXZ = 60^o$, $XY = 3a$ and $XZ = 4a, (a > 0)$. Let $P$ be a point on the segment $XY$ such that $XP = \frac{1}{3} XY$. Let $Q$ be a point on the side $XZ$ such that $XQ = \frac{1}{2} XZ$. Let $R$ be the midpoint of $PQ$. Determine the length of $YR$.
+",$\frac{a\sqrt{19}}{2}$,Geometry,computation,Hanoi Open Mathematical Olympiad 2018
+imo-bench-geometry-038,"Let $Q, R$ be fixed points with coordinates $(-1,0)$ and $(1,0)$ respectively and $P$ be a moving point with coordinate $(a,b)$. Let $O, M$ be orthocentre and centroid of triangle $PQR$. It is known that the midpoint of $OM$ lies on $QR$, find the locus of $P$.
+",$3a^2 - b^2 = 3$,Geometry,locus_geometry,Vietnam Mathematical Olympiad 2007
+imo-bench-geometry-039,"Given a circumcircle $(K)$ and two fixed points $Y,Z$ on $(K)$. $YZ$ is not the diameter of $(K)$. A point $X$ varies on $(K)$ such that $XYZ$ is an acute triangle. $M,N$ is the foot of the altitude from $Y,Z$ respectively of $XYZ$. $(J)$ is a variable circumcircle going through $M$ and $N$ with center $J$. Assume that $(J)$ touches $YZ$ at $P$. Denote $\cot Y = y$ and $\cot Z = z$, calculate $\frac{PY}{PZ}$ in terms of $y, z$.
+",$\sqrt{\frac{y}{z}}$,Geometry,computation,Vietnam Mathematical Olympiad 2015
+imo-bench-geometry-040,"Let $k$ be a positive real number. Triangle XYZ is acute and scalene, O is its circumcenter and XD, YE, ZF are the internal bisectors. On the rays XD, YE, ZF, respectively, let points P, Q, R such that $\frac{XP}{XD} = \frac{YQ}{YE} = \frac{ZR}{ZF} = k$. Denote $(C_1), (C_2), (C_3)$ be respectively the circle through P and touches OX at X, the circle through Q and touches OY at Y, the circle through R and touches OZ at Z. Find all values of k such that three circles $(C_1), (C_2), (C_3)$ have exactly two common points.
+","1/2, 1",Geometry,proof_based_geometry,Vietnam TST 2008
+imo-bench-geometry-043,"Let $XYZ$ be an acute triangle with $X=60^{\circ}$. Let $Q, R$ be the feet of altitudes through $Y, Z$ respectively. Compute $ZQ-YR$ in terms of $XY, XZ$.
+",$\frac{3}{2}(XZ-XY)$,Geometry,computation,Iran Geometry Olympiad 2017
+imo-bench-geometry-046,"Let $XYZ$ be an isosceles triangle ($XY = XZ$) with its circumcenter $P$. Point $Q$ is the midpoint of the segment $YZ$ and point $R$ is the reflection of the point $Q$ with respect to the side $XZ$. Suppose that $S$ is a point so that $XQYS$ is a rectangle. Denote $\angle YXZ = a$, compute $\angle PRS$ in terms of $a$.
+",$\frac{a}{2}$,Geometry,computation,Iran Geometry Olympiad 2020
+imo-bench-geometry-049,"There are several circles whose radii are no more than 1, and whose centers all lie on a segment with length $l$. Find the maximum value of the perimeter of the union of all the circles.
+",$\pi(l+2)$,Geometry,combinatorial_geometry,Iran Geometry Olympiad 2023
+imo-bench-geometry-056,"Let $ PQR $ be fixed obtuse triangle, and let $ M $ denote its orthocenter. Let $ \alpha_P $ denote the circle with center $ P $ and radius $ PM $. Let $ \alpha_Q $ and $ \alpha_R $ be defined in a similar way. Let $Y$ be a moving point outside of the circumcircle of triangle $ PQR $, let circle $ \Xi(Y) $ be defined in the following way (if possible): take the polars of point $ Y $ with respect to circles $ \alpha_P $, $ \alpha_Q $, and $ \alpha_R $, and let $ \Xi(Y) $ be the circumcircle of the triangle defined by these three lines.
+
+Find the locus of points $ Y $ such that point $ Y $ lies on circle $ \Xi(Y) $.
+
+",$Y = M$,Geometry,locus_geometry,Komal
+imo-bench-geometry-073,"A non-equilateral triangle $XYZ$ is inscribed in a circle $\Omega$ with centre $P$, radius $R$ and its incircle has centre $Q$ and touches $YZ,ZX,XY $ at $L,M,N$, respectively. A circle with centre $Q$ and radius $\rho$ intersects the rays $[QL),[QM),[QN)$ at $X',Y',Z'$.
+
+Compute $\dfrac{QK}{QP}$ in terms of $\rho$ and $R$ where $K$ is the orthocenter of $X'Y'Z'$.
+",$\frac{\rho}{R}$,Geometry,computation,Mathley 2011-2012
+imo-bench-geometry-075,"In the triangle $DEF$, $\angle{F}=90^{\circ},\angle {D}=30^{\circ}$ and $EF=1$. Find the minimum value of the longest side of all inscribed triangles (i.e. triangles with vertices on each of three sides) of the triangle $DEF$.
+",$\sqrt{\frac{3}{7}}$,Geometry,extremal_geometry,China 1996
+imo-bench-geometry-076,"Let $x$ be a real number with $\sqrt{2}<x<2$, and let $PQRS$ be a convex cyclic quadrilateral whose circumcentre $I$ lies in its interior. The quadrilateral's circumcircle $\gamma$ has radius $1$, and the longest and shortest sides of the quadrilateral have length $x$ and $\sqrt{4-x^2}$, respectively. Lines $L_P,L_Q,L_R,L_S$ are tangent to $\gamma$ at $P,Q,R,S$, respectively.
+
+Let lines $L_P$ and $L_Q$, $L_Q$ and $L_R$,$L_R$ and $L_S$,$L_S$ and $L_P$ intersect at $P',Q',R',S'$ respectively. Determine the minimum value of $\frac{S_{P'Q'R'S'}}{S_{PQRS}}$ in terms of $x$.
+",$\frac{4}{x\sqrt{4-x^2}}$,Geometry,extremal_geometry,China 2001
+imo-bench-geometry-079,"Let $PQRST$ be a regular pyramid with square base $QRST$. Suppose that on the line $QS$ lies a point $N$ such that $PN=NR$ and $(PNR)\perp (PQR)$. Compute $\frac{QS}{QN}$.
+",$\frac{4}{3}$,Geometry,3d_geometry,Romania 2010
+imo-bench-geometry-082,"Let $F$ be the footpoint of the altitude from $Y$ in the triangle $XYZ$ , where $XY=1$ . The incircle of triangle $YZF$ coincides with the centroid of triangle $XYZ$. Find the lengths of $XZ$.
+",$\frac{\sqrt{10}}{2}$,Geometry,computation,Baltic Way 2015
+imo-bench-geometry-086,"Let $T_1T_2T_3T_4$ be a tetrahedron in $\mathbb{R}^3$ and let $C$ be a point equidistant from each of its vertices. Suppose there exists a point $K$ such that for each $i$, the line $T_iK$ is perpendicular to the plane through the other three vertices. Line $T_1K$ intersects the plane through $T_2, T_3, T_4$ at $X$, and contains a point $Y\neq T_1$ such that $CT_1=CY$. Compute $\frac{KX}{KY}$.
+",$\frac{1}{3}$,Geometry,3d_geometry,HMIC 2020
+imo-bench-geometry-087,"Let triangle $XYZ$ be a triangle, and let $J$ be its incenter. Let the incircle of triangle $XYZ$ touch side $YZ$ at $W$, and let lines $YJ$ and $ZJ$ meet the circle with diameter $XJ$ at points $M$ and $N$ respectively. Given $YJ = 8, ZJ = 6, WJ = 4$, determine the value of $\frac{WM}{WN}$.
+",$\frac{3\sqrt{3}}{2\sqrt{5}}$,Geometry,computation,HMMT 2008
+imo-bench-geometry-089,"Let $\Omega$ be a circle, and $\gamma_1$ and $\gamma_2$ be two non-intersecting circles inside $\Omega$ that are internally tangent to $\Omega$ at $Y_1$ and $Y_2$, respectively. Let one of the common internal tangents of $\gamma_1$ and $\gamma_2$ touch $\gamma_1$ and $\gamma_2$ at $S_1$ and $S_2$, respectively, while intersecting $\Omega$ at two points $C$ and $D$. Given that $2Y_1S_1=Y_2S_2$ and that $\gamma_1$, $\gamma_2$, and $\Omega$ have radii $2$, $3$, and $12$, respectively, compute the length of $CD$.
+",$\frac{96\sqrt{10}}{13}$,Geometry,computation,HMMT 2020
+imo-bench-geometry-091,"Triangle $PQR$ has incenter $J$. Let $S$ be the foot of the perpendicular from $P$ to side $QR$. Let $Y$ be a point such that segment $PY$ is a diameter of the circumcircle of triangle $PQR$. Given that $JS = 2$, $JP = 3$, and $JY = 4$, compute the inradius of triangle $PQR$.
+",$\frac{11}{12}$,Geometry,computation,HMMT 2023
+imo-bench-geometry-096,"Let $PQRS$ be a convex quadrilateral with perimeter $3$ and $PR=QS=1$. Determine the maximum possible area of $PQRS$.
+",$\frac{5}{8}$,Geometry,extremal_geometry,USAMTS 2016
+imo-bench-geometry-097,"A regular heptagon and a regular octagon are inscribed in a circle. Let $d$ be the minimum distance in degrees (of the arc along the circle) between a vertex of the heptagon and a vertex of the octagon. What is the maximum possible value of $d$?
+",$\frac{45}{14}$,Geometry,combinatorial_geometry,USAMTS 2016
+imo-bench-number_theory-004,"Find all positive integer triples $(x, y, z)$ that satisfy $x^3 + y^3 + z^3 - x^2y^2z^2 = 0$ and $x \le y \le z$.
+","$(1, 2, 3)$",Number theory,Diophantine Equation,IMO Shortlist 2019
+imo-bench-number_theory-005,"A subset $X$ of $\mathbb{Z}$ is called rich if for any positive integer $n$ and $n$ numbers $x_0, x_1, \dots, x_n$ belonging to $X$, all integer roots of $x_0 + x_1 \cdot x + \dots + x_n \cdot x^n = 0$ belong to $X$. Find all rich sets that contain $2^k - 2^l$ for any positive integers $k$ and $l$.
+",$\mathbb{Z}$,Number theory,Polynomial,IMO Shortlist 2019
+imo-bench-number_theory-006,"For a given positive integer $a$, find the number of positive integers $b$ less than or equal to $a^2+1$ that satisfy the following condition:
+
+<Condition> There exists a positive integer $s$ such that the number of divisors of $s \cdot a$ is equal to the number of divisors of $s \cdot a + s \cdot b$.
+","$a^2 - a + 1$ ( $a \ge 2$)
+0 ($a=1$)",Number theory,Divisor,IMO Shortlist 2018
+imo-bench-number_theory-007,"Find all positive integers $n \geq 2$ that satisfy the following condition:
+(Condition) For any $n$ numbers $b_1, \dots, b_n$ whose sum is not a multiple of $n$, there exists some $1 \leq j \leq n$ such that $b_j, b_j + b_{j-1}, \dots, b_j + b_{j-1} + \dots + b_{j-n+1}$ are all not multiples of $n$.
+(Here, for any integer $i$ with $1 \leq i \leq n$, $b_{i-n} = b_i$.)
+","n is prime
+",Number theory,Divisibility,IMO Shortlist 2017
+imo-bench-number_theory-009,"For a positive integer $n$, let $\tau(n)$ be the number of divisors of $n$, and let $\tau_1(n)$ be the number of divisors of $n$ that leave a remainder of 1 when divided by 3. Find all positive integers that cannot be represented as $\frac{\tau(22m)}{\tau_1(22m)}$ for some positive integer $m$.
+",1 and odd prime numbers,Number theory,Number Theoretic Functions,IMO Shortlist 2016
+imo-bench-number_theory-010,"Suppose $f$ is a polynomial with integer coefficients of odd degree $d \ge 3$. Assume that the following condition holds:
+
+(Condition) For any positive integer $n$, there exist distinct positive integers $a_1, \dots, a_n$ such that for any $1 \leq i, j \leq n$, $\frac{f(a_i)}{f(a_j)}$ is between $\frac{1}{2}$ and $2$ and is the $d$-th power of some rational number.
+
+Furthermore, for some prime $p$, we know that $f(1)=3^d p$ and $\frac{f(2)}{f'(2)}=\frac{5}{2d}$. Evaluate $f(3)$.
+",$7^d p$,Number theory,Polynomial,IMO Shortlist 2016
+imo-bench-number_theory-011,"Find all positive integers $n$ such that the sequence $\{x_i\}$ defined by $x_1 = \frac{2n-1}{2}$ and $x_{k+1} = x_k \cdot \lfloor x_k \rfloor$ for $k\ge 1$ contains at least one integer.
+","$n=1, n \ge 3$",Number theory,Sequence,IMO Shortlist 2015
+imo-bench-number_theory-012,"Find all positive integers $n$ such that there exists a function $f:\mathbb{N}\rightarrow \mathbb{N}$ from positive integers to positive integers satisfying $\operatorname{gcd}(f(a)+a+b, f(a+b)+a)\leq n$ for all positive integers $a,b$.
+",$n \ge 2$,Number theory,Functional Equation,IMO Shortlist 2015
+imo-bench-number_theory-013,"For a positive integer $n \geq 2$, let the set $C_n$ be the set of integers $2^n - 2^i$ for integers $i$ such that $0 \leq i < n$. Find the smallest positive integer that cannot be expressed as a sum of numbers in $C_n$ (where the same number can be used multiple times).
+","$(n-2)2^n +1$
+",Number theory,Representation,IMO Shortlist 2014
+imo-bench-number_theory-014,"Find all pairs of positive integers $(a,b)$ that satisfy the following condition:
+$\sqrt[3]{7a^2 +ab+b^2}=a+1$
+","$(n^2 +3n+2, n^3 + 4n^2 + 3n -1)$
+for $n \ge 1$",Number theory,Diophantine Equation,IMO Shortlist 2014
+imo-bench-number_theory-015,"Find all ordered triples $(p, a, b)$ of a prime $p > 2$ and positive integers $a, b$ such that $a\le b$ and both $a^{p-1} + b$ and $b^{p-1} + a$ are powers of $p$.
+","(3,2,5)",Number theory,Perfect power,IMO Shortlist 2014
+imo-bench-number_theory-016,"Find all functions $g:\mathbb{Q}\rightarrow \mathbb{Z}$ that satisfy the following condition for any rational number $x$, integer $a$, and positive integer $b$:
+$g(x)=g(\frac{g(bx-a)+a}{b})$
+","$g(x)=c, g(x)=\lceil x \rceil, g(x)=\lfloor x \rfloor$
+",Number theory,Functional Equation,IMO Shortlist 2013
+imo-bench-number_theory-019,"Find all positive integer triples $(a,b,c)$ that satisfy $a \le b \le c$ and
+$a^3 (b^3 +c^3 )= 2012 (abc+2)$
+","(2,251,252)
+",Number theory,Diophantine Equation,IMO Shortlist 2012
+imo-bench-number_theory-026,"Find the maximum number of possible colors in a $2^n \times 2^n$ board colored such that for any $0 \leq a, b \leq 2^n - 1$, the color of the cell in the $a$-th row and $b$-th column is the same as the color of the cell in the $(b-a)$-th row and $a$-th column (where rows and columns are numbered from 0 to $2^n - 1$, and the row index is taken modulo $2^n$).
+","$2^n$
+",Number theory,Other,IMO Shortlist 2010
+imo-bench-number_theory-029,"Let $\tau(n)$ be the number of positive divisors of a positive integer $n$. Suppose that the function $g:\mathbb{N}\rightarrow \mathbb{N}$ satisfying the following two conditions:
+(1) For any positive integer $n$, $\tau(g(n))=n$.
+(2) $\frac{(m-1)n^{mn-1}g(m)}{g(mn)}$ is an integer.
+If $N>1$ is a positive integer whose prime factorization can be written as $N=p_1^{e_1}\cdots p_k^{e_k}$ where $p_1, \ldots, p_k$ are distinct prime, and $e_1, \ldots, e_k$ are positive integers. Find all the possible values of $g(N)$.
+","$p_1^{p_1^{e_1}-1} \cdots p_k^{p_k^{e_k}-1}$
+",Number theory,Functional Equation,IMO Shortlist 2008
+imo-bench-number_theory-030,"For a positive integer $n$, let $a_n = \binom{2^n}{2^{n-1}}$. For this, let $b_n = a_{n+1}-a_n$. For $n\geq 2$, find the exponent of $2$ in the prime factorization of $b_n$.
+",$3n$,Number theory,Binomial,IMO Shortlist 2007
+imo-bench-number_theory-031,"Let $k>l$ be given coprime positive integers greater than 1. Define a function $f: \mathbb{Z}\rightarrow \mathbb{Z}$ as follows: for $x$, $f(x)$ is the smallest value of $|a|+|b|$ among all integers $a,b$ satisfying $ka+lb = x$.
+ An integer $x$ is called 'nice' if $f(x)\geq \max (f(x-a),f(x+a),f(x-b),f(x+b))$. Denote by $F(k,l)$ the the number of nice integers when both $k$ and $l$ are odd, and denote by $G(k,l)$ the number of nice integers when either $k$ or $l$ is even. Suppose that there exists polynomials $p(k,l)$ and $q(k,l)$ such that $F(k,l)=p(k,l)$ for all odd integers $k,l$ and $G(k,l)=q(k,l)$ whenever at least one of $k$ or $l$ is even.  Evaluate $p(k,l)^2 + q(k,l)^2$.",$5(l-1)^2$,Number theory,Diophantine Equation,IMO Shortlist 2006
+imo-bench-number_theory-033,"Find all positive integers $m$ for which there exists a unique positive integer $n$ satisfying the following two conditions:
+(1) $0 \leq n < m!$
+(2) $m! \mid n^m + 1$
+","m is prime or 1
+",Number theory,Divisibility,IMO Shortlist 2005
+imo-bench-number_theory-034,"Find all integer values that appear exactly once as the value of $\frac{g(n)}{n}$, where $g:\mathbb{N}\rightarrow\mathbb{N}$ is a function defined by $g(m)=\sum_{i=1}^m \gcd(i,m)$.","All powers of 2
+",Number theory,Divisor,IMO Shortlist 2004
+imo-bench-number_theory-035,"Let $n$ be a given positive integer bigger than 1. For $1 \leq k \leq n$, $a_k = 2^{k-1}$. For $k > n$, the sequence $(a_i)$ satisfies the recurrence relation $a_k = a_{k-1} + \cdots + a_{k-n}$. Suppose that $m$ consecutive terms in the sequence are multiples of $n$. Find the maximum possible value of $m$.
+",$n-1$,Number theory,Sequence,IMO Shortlist 2003
+imo-bench-number_theory-036,"We are given the function $f:\mathbb{N}\rightarrow \mathbb{N}$.
+
+$f(n)$ is the number obtained by moving the units digit of $n$ to the front.
+Find all positive integers $n$ such that $f^{-1}(f(n)^2)=n^2$.
+","$2,3, \underbrace{2\cdots2}_{n}1$
+",Number theory,Base and Digit,IMO Shortlist 2003
+imo-bench-number_theory-037,"Let $A$ be the set of odd integers $a$ such that $|a|$ is not a perfect square.
+
+Find all numbers that can be expressed as $x+y+z$ for $x, y, z \in A$ such that $xyz$ is a perfect square.
+","All numbers of the form $4k+3$
+",Number theory,Representation,IMO Shortlist 2003
+imo-bench-number_theory-038,"Let a set $S$ be called $p$-good for a given prime number $p$ if it satisfies the following three conditions:
+(1) $S$ consists of positive integers.
+(2) The number of primes dividing at least one number in $S$ is $p-1$.
+(3) For any subset of $S$, the product of all elements in that subset is not a $p$-th power.
+
+Find the maximum number of elements that a $p$-good set can have.
+",$(p-1)^2$,Number theory,Set,IMO Shortlist 2003
+imo-bench-number_theory-041,"Find all positive integers $n\ge 2$ such that for any positive integer $k$ relatively prime to $n$, $k^2 - 1$ is a multiple of $n$.
+","2, 3, 4, 6, 8, 12, 24
+",Number theory,Divisibility,IMO Shortlist 2000
+imo-bench-number_theory-042,Find all positive integers $k$ such that the number of positive divisors of $2k^3$ is $2k$. ,"1, 4, 10",Number theory,Divisor,IMO Shortlist 2000
+imo-bench-number_theory-046,"Find the minimum value of $m$ such that for any $m$ positive integers, there exist $k$ positive integers whose sum is a multiple of $k$.
+","$2k-1$
+",Number theory,Divisibility,Ukraine 1997
+imo-bench-number_theory-047,"Find all positive integers $k \ge 9$ that satisfy the following condition:
+
+(Condition) Suppose two $k$-digit positive integers $a$ and $b$ satisfy that whenever any digit of $a$ is replaced with the corresponding digit of $b$, the resulting number is divisible by 7. Then, whenever any digit of $b$ is replaced with the corresponding digit of $a$, the resulting number is divisible by 7.
+",$k=7m+2$,Number theory,Base and Digit,United Kingdom 1997
+imo-bench-number_theory-048,"Find all pairs $(a, b)$ of positive real numbers such that for every prime number $p$ and real number $x$ satisfying
+\[
+    2^{2^{p + 1}x} = 2^px + 1,
+\]
+we have
+\[
+    \frac{a^x + b^x + 1}{3} \ge x + 1.
+\]
+","$\{(a,b):ab \geq e^3\}$
+",Number theory,Diophantine Equation,Vietnam 1997
+imo-bench-number_theory-050,"A sequence $(a_k)$ is called ""weakly increasing"" if there exists an $N$ such that $a_{k+1} > a_k$ for $k > N$.
+
+Find all possible values of the positive integer $n$ for which the sequence defined by $x_k = \operatorname{lcm}(k, k+1, \ldots, k+(n-1))$ is a weakly increasing sequence.
+","1, 2",Number theory,Sequence,Belarus 2018
+imo-bench-number_theory-051,"Find the maximum value of $k$ such that for any finite set of positive real numbers less than or equal to 1 whose sum is $k$, it is possible to partition the set into two sets such that the sum of the numbers in one set is less than or equal to 1 and the sum of the numbers in the other set is less than or equal to 6.
+",6.5,Number theory,Set,Belarus 2018
+imo-bench-number_theory-052,"Find all prime numbers $p < 260^2$ that satisfy $\{\sqrt{p}\} < \frac{1}{510}$.
+",$2^{16} + 1$,Number theory,Number Theoretic Functions,Belarus 2018
+imo-bench-number_theory-053,"Given a positive integer $n$, a sequence $(x_1, \cdots, x_n)$ exists such that for any $(c_1, \cdots, c_n) \in \{-1, 1\}^n$, $(c_1 x_1, c_1 x_1 + c_2 x_2, \cdots, c_1 x_1 + \cdots + c_n x_n)$ is a permutation of $(1, \cdots, n)$ modulo $n$. Find all possible values of $n$.
+","All powers of 2
+",Number theory,Sequence,Britain 2018
+imo-bench-number_theory-054,"Find all positive integers $a$ that satisfy the following condition:
+(Condition) There exists a positive integer $b$ such that, if $A$ is the set of positive divisors of $a$, then every number in $A-b$ is also a divisor of $a$.
+","All prime numbers, 1, 4, and 6.
+",Number theory,Divisor,Dutch 2017
+imo-bench-number_theory-055,"A positive integer $m$ consisting of distinct digits is considered ""good"" if it is a single-digit number, or if removing one of its digits results in a divisor of $m$ that is also a good number.
+
+Find the largest good number.
+",146250,Number theory,Base and Digit,Estonia TST 2018
+imo-bench-number_theory-058,"Let $N$ be a positive integer. Consider an infinite two-dimensional grid where each cell $(i, j) \in \mathbb{Z}_{>0}^2$ is filled with a positive integer $a_{ij}$. Determine all possible ways to fill the grid so that the following two conditions are satisfied:
+
+(i) Each positive integer $n$ appears exactly $n$ times in the grid.
+
+(ii) For each $n = 0, 1, \ldots, N$, the difference $a_{k + n, \ell + N - n} - a_{k, \ell}$ is a constant depending on $n$ for any positive integers $k, \ell$.
+",$a_{ij} = i + j - 1$,Number theory,Sequence,Japan TST 2018
+imo-bench-number_theory-059,"Let $n$ be a positive integer with at least 5 positive divisors. Let $a, b, c$ be its second, third, and fifth smallest divisors, respectively. Suppose the following equation holds:
+\[
+    (a + b + c)^2 = a^2 + b^2 + c^2 + 2n
+\]
+Find all possible values the number of divisors of $n$.
+","8, 9",Number theory,Diophantine Equation,Belarus 2017
+imo-bench-number_theory-060,"Define a set
+\[
+    S  = \{2025k + 1: 0 \le k \le 2025^{100}, k \in \mathbb{Z}\}.
+\]
+Consider the following operation: take the largest element of $S$, and remove all of its divisors from $S$. Repeating this operation, what will be the last element removed from $S$?
+","$\frac{2025^{101} + 2025^2 + 2025 + 1}{2026}$
+",Number theory,Operation,Bulgaria 2017
+imo-bench-number_theory-061,"Find all even integers $d$ such that the number of ordered integer pairs $(x, y)$ satisfying
+\[
+    (x + 2y - d)^2 = xy
+\]
+is even.","all multiples of 14, excluding 0",Number theory,Diophantine Equation,Czech and Slovak 2017 (modified)
+imo-bench-number_theory-062,"Let $g: \mathbb{Z}_{>0} \to \mathbb{Z}$ be a function satisfying the following conditions:
+
+(i) $g(p) = p + 1$ for all prime numbers $p$,
+
+(ii) $g(nm) + nm = ng(m) + mg(n)$  for all positive integers $n, m$.
+
+Find all integers $1 \le n \le 4000$ satisfying $g(n) = 2n$.
+","4, 27, 3125",Number theory,Functional Equation,Dutch 2017
+imo-bench-number_theory-063,"Find all nonnegative integers $n$ such that
+\[
+    \frac{3((n+2)! + 1)}{2n - 1}
+\]
+is an integer.
+","0, 1, 2, 4, 12",Number theory,Divisibility,Dutch 2017
+imo-bench-number_theory-065,"Let $k$ be a positive integer and $p$ be a prime. Define a sequence $(x_n)$ of positive integers such that $x_1 = 8p^k$ and
+\[
+    x_n = (n+1)^{x_{n-1}/n}, \quad n = 2, 3, \ldots.
+\]
+Suppose that the product $x_1 x_2 \cdots x_n$ divides $(x_1 - 1)(x_2 - 1)\cdots(x_{n+1} -1)$ for all $n = 1, 2, \ldots$. Find all possible primes $p$.","2, 5",Number theory,Sequence,Romania 2017
+imo-bench-number_theory-066,"Let $\mathbb{N}$ be the set of positive integers.
+Find all functions $f:\mathbb{N}\rightarrow\mathbb{N} \cup \{0\}$ such that
+\[
+    x + y + f(x) | xy + f(y) + yf(x) + y
+\]
+for all $x, y \in \mathbb{N}$.
+","$f(x) = x^2 - x$
+",Number theory,Functional Equation,Balkan MO 2017
+imo-bench-number_theory-069,"Let $n$ be a positive integer, and let $1 = d_0 < d_1 < \dots < d_k$ be its odd divisors in increasing order. Find all $n$ such that $k \ge 1$ and $5d_1 = n - 3d_k$.
+","60, 100, 8p (for all odd primes p)",Number theory,Divisor,Dutch 2015
+imo-bench-number_theory-072,"Find all tuples of positive integers $(x, n, k)$ with $x > n \ge 2$ such that
+\[
+    x^n + x = 2^k + 2.
+\]
+","$(5, 3, 7)$
+",Number theory,Diophantine Equation,Olimpiadi Italiane della Matematica 2016
+imo-bench-number_theory-073,"Let $q$ be an odd prime number. For an integer $i$ from 1 to $q-1$, let $n_i$ denote the number of divisors of $qi+1$ that are greater than or equal to $i$ and less than or equal to $q-1$. Find the sum of $n_1, n_2, \ldots, n_{q-1}$.
+","$q-1$
+",Number theory,Divisor,Japan 2016
+imo-bench-number_theory-074,"Find all pairs $(a, b)$ of rational numbers such that
+\[
+    a^2 - b^2 = \frac{a}{a - 2}.
+\]
+","(0, 0)",Number theory,Diophantine Equation,Korea 2026 (modified)
+imo-bench-number_theory-075,"Find all monic polynomials $P(x)$ with integer coefficients for which
+\[
+    \frac{6(|P(q)|!) - 1}{q}
+\]
+is an integer for every prime $q$ greater than 3.
+","$P(x) = x - 4$
+",Number theory,Polynomial,Balkan MO 2016
+imo-bench-number_theory-079,"Define two sequences $\{a_n\}$ and $\{b_n\}$ as follows:
+\[
+\begin{array}{lll}
+    a_1 = 6, &a_2 = 217, &a_{n}a_{n+2}-1 = a_{n+1}^3 \quad(n \geq 1), \\
+    b_1 = 1, &b_2 = 1, & b_{n+2} = b_{n+1} + b_n \quad(n \geq 1).
+\end{array}
+\]
+Find all positive integers $n$ such that $a_{n+2} \cdot 42^{b_{2n}}$ is an integer.
+",All positive integers,Number theory,Sequence,Korea 2015 (modified)
+imo-bench-number_theory-080,"Let $p$ be a prime greater than $100$. Find the $9$th largest positive integer $n$ less than $p$ such that
+\[
+    nk + k \ge p \left\lfloor \frac{nk + n}{p} \right\rfloor
+\]
+for all $k = 0, 1, \ldots, p - 2$.",$\lfloor \frac{p}{9} \rfloor$ ,Number theory,Number Theoretic Functions,RMM 2015
+imo-bench-number_theory-081,"Find all pairs of positive integers $(M, N)$ that satisfy $M \ge 2014$, $N \ge 4028$, and $\binom{M}{2014} = \binom{N}{4028} \times \frac{4028!}{2014!}$.
+",no solutions,Number theory,Binomial,China TST 2014 ( modified)
+imo-bench-number_theory-083,"Let $K$ be a subset of $\{0, 1, \dots, 2020\}$ with $|K| \ge 3$.
+For any $p, q \in K$, there exists $r \in K$ such that $p+q-2r$ is a multiple of $2021$.
+Find all possible values of $|K|$.
+","43,47,2021",Number theory,Set,China Girl's MO 2014
+imo-bench-number_theory-084,"Find all integers $x$ such that $(8x-41)(x+3)^2$ is a perfect cube.
+","5,-3",Number theory,Diophantine Equation,Greece 2014
+imo-bench-number_theory-090,"Let $n > 12345$ be a prime number. Let $P$ be the set of all bijections from $\{1, 2, \dots, n\}$ to itself. Let $Q$ be a subset of $P$ such that for any two elements $\tau, \sigma \in Q$, the number of $1 \le x \le n$ such that $\tau(x) = \sigma(x)$ is at least 2. Find the maximum possible value of $|Q|$.
+",$(n-2)!$,Number theory,Other,Iran 2004
+imo-bench-number_theory-094,"Let $\tau(n)$ be the number of positive divisors of a positive integer $n$. Find all positive integers $n$ such that $n = \tau(n^{12})$.
+","1, 13, 25, 325",Number theory,Diophantine Equation,Ireland 1999
+imo-bench-number_theory-095,"Let $S(n)$ be the sum of the digits in the decimal representation of a positive integer $n$. Find the smallest positive integer $n$ such that $S(n)S(n+1)\cdots S(n+37)$ is not a multiple of $11$.
+",999981,Number theory,Base and Digit,Romania 1999
+imo-bench-number_theory-096,"Let $a$ be a positive integer greater than or equal to $3$. A finite set $X$ of positive integers is said to be 'clustered' if for any three elements $x, y, z$ chosen from $X$, at least one of $\gcd(x,y)$, $\gcd(y,z)$, or $\gcd(z,x)$ is not equal to $1$. Find the maximum possible value of $|X|$ for a clustered set $X \subset \mathbb{N}$ where the difference between the maximum and minimum elements of $X$ are less than or equal to $a$.
+",$\lfloor \frac{a+2}{2}\rfloor +\lfloor \frac{a+2}{3}\rfloor -\lfloor \frac{a+2}{6}\rfloor $,Number theory,Set,China 2004
+imo-bench-number_theory-097,"Find the number of ordered quadruples of positive integers $(a,b,c,d)$ such that $a^2+b^2+c^3-d^3$ is a multiple of $61$ and $1\le a,b,c,d\le 61$.
+",234301,Number theory,Divisibility,Turkey 2000
