@@ -554,6 +554,10 @@ imo-bench-number_theory-019,"Find all positive integer triples $(a,b,c)$ that sa
 $a^3 (b^3 +c^3 )= 2012 (abc+2)$
 ","(2,251,252)
 ",Number theory,Diophantine Equation,IMO Shortlist 2012
+imo-bench-number_theory-022,"For a given positive integer $n$, let $m$ be the exponent of 2 in the prime factorization of $n$. Define $f(n) = \frac{n}{2^m}$. Find all positive integers $u$ for which there exists a positive integer $v$ such that
+
+(Condition) $f(u+v) - f(u), f(u+v+1) - f(u+1), \cdots, f(u+2v-1) - f(u+v-1)$ are all multiples of 4.
+","1,3,5",Number theory,Divisibility,IMO Shortlist 2011
 imo-bench-number_theory-026,"Find the maximum number of possible colors in a $2^n \times 2^n$ board colored such that for any $0 \leq a, b \leq 2^n - 1$, the color of the cell in the $a$-th row and $b$-th column is the same as the color of the cell in the $(b-a)$-th row and $a$-th column (where rows and columns are numbered from 0 to $2^n - 1$, and the row index is taken modulo $2^n$).
 ","$2^n$
 ",Number theory,Other,IMO Shortlist 2010
@@ -685,6 +689,8 @@ Find all functions $f:\mathbb{N}\rightarrow\mathbb{N} \cup \{0\}$ such that
 for all $x, y \in \mathbb{N}$.
 ","$f(x) = x^2 - x$
 ",Number theory,Functional Equation,Balkan MO 2017
+imo-bench-number_theory-068,"Find all integers $n\ge 3$ for which $2^n - 3$ is a power of 5.
+","3,7",Number theory,Diophantine Equation,Belarus 2016
 imo-bench-number_theory-069,"Let $n$ be a positive integer, and let $1 = d_0 < d_1 < \dots < d_k$ be its odd divisors in increasing order. Find all $n$ such that $k \ge 1$ and $5d_1 = n - 3d_k$.
 ","60, 100, 8p (for all odd primes p)",Number theory,Divisor,Dutch 2015
 imo-bench-number_theory-072,"Find all tuples of positive integers $(x, n, k)$ with $x > n \ge 2$ such that
@@ -708,6 +714,11 @@ imo-bench-number_theory-075,"Find all monic polynomials $P(x)$ with integer coef
 is an integer for every prime $q$ greater than 3.
 ","$P(x) = x - 4$
 ",Number theory,Polynomial,Balkan MO 2016
+imo-bench-number_theory-078,"Find all nonnegative integers $n$ for which the following holds:
+\begin{center}
+    $20^{n+1}$ is divisible by $n^3 + 4n^2 + 6n + 4$.
+\end{center}
+","0,2,6",Number theory,Divisibility,Japan 2015
 imo-bench-number_theory-079,"Define two sequences $\{a_n\}$ and $\{b_n\}$ as follows:
 \[
 \begin{array}{lll}
