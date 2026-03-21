@@ -11,18 +11,44 @@
 | **Gold Fallback** | Nemotron gpt-oss-120B trajectories (already in dataset) |
 | **Framework** | Unsloth + TRL + vLLM |
 | **Hardware** | 1× NVIDIA H200 (141GB HBM3) |
-| **Total Time** | ~47 hours (~2 days) |
-| **Gemini Cost** | ~$150–200 (Flash pricing) |
+| **Total Time** | ~42 hours (~1.75 days) |
+| **Gemini Cost** | ~$100–150 (Flash, Rounds 2–3 only) |
 
 ---
 
-## Pipeline Per Round
+## Pipeline: Round 1 (Fast, No Gemini)
 
 ```
 440K problems
     │
     ▼
-Step 1: vLLM generates 2 solutions per problem (7 hrs, GPU)
+Step 1: vLLM generates 1 solution per problem (~3.5 hrs, GPU)
+    │
+    ▼
+Step 2: Regex check — is the answer correct? (instant)
+    │
+    ├── Correct? → SKIP (nothing to learn)
+    │
+    └── Wrong? → DPO pair:
+            chosen  = Nemotron 120B gold trajectory (from dataset)
+            rejected = model's wrong attempt
+    │
+    ▼
+Step 3: DPO train, 1 epoch (~7 hrs, GPU)
+    │
+    ▼
+Step 4: Merge LoRA + upload to Kaggle (30 min)
+```
+
+Round 1 always uses Nemotron gold as chosen. No Gemini needed. Only 1 generation per problem (not 2), so generation is 2× faster.
+
+## Pipeline: Rounds 2–3 (Gemini Judge, Model vs Model)
+
+```
+440K problems
+    │
+    ▼
+Step 1: vLLM generates 2 solutions per problem (~7 hrs, GPU)
     │
     ▼ (overlapped with Step 1)
 Step 2: Gemini Flash judges all solutions (2-3 hrs, async API)
@@ -32,10 +58,10 @@ Step 2: Gemini Flash judges all solutions (2-3 hrs, async API)
     │
     ▼
 Step 3: Build DPO pairs from scores (instant)
-        → score_a > score_b  → chosen=A, rejected=B
-        → score_b > score_a  → chosen=B, rejected=A
-        → both < 0.3         → chosen=Nemotron gold, rejected=worst
-        → scores within 0.1  → skip (no clear preference)
+        → One right, one wrong   → chosen=correct, rejected=wrong
+        → Both right, diff quality → Gemini picks better reasoning
+        → Both wrong              → chosen=Nemotron gold, rejected=worst
+        → Same score (within 0.1) → skip
     │
     ▼
 Step 4: DPO train, 1 epoch (5-7 hrs, GPU)
@@ -44,7 +70,7 @@ Step 4: DPO train, 1 epoch (5-7 hrs, GPU)
 Step 5: Merge LoRA + upload to Kaggle (30 min)
     │
     ▼
-Next round (model is now better, generates different solutions)
+Next round (model is better, different errors)
 ```
 
 ---
@@ -53,12 +79,12 @@ Next round (model is now better, generates different solutions)
 
 | | Generate | Judge | Train | Merge + Upload | Total |
 |:---:|:---:|:---:|:---:|:---:|:---:|
-| **Round 1** | 7 hrs | 2.5 hrs (overlapped) | 7 hrs | 30 min | ~17 hrs |
-| **Round 2** | 7 hrs | 2 hrs | 6 hrs | 30 min | ~15.5 hrs |
-| **Round 3** | 7 hrs | 1.5 hrs | 5 hrs | 30 min | ~14 hrs |
-| **Total** | | | | | **~47 hrs** |
+| **Round 1** | 3.5 hrs (1 sol each) | none (regex only) | 7 hrs | 30 min | ~11 hrs |
+| **Round 2** | 7 hrs (2 sol each) | 2.5 hrs (overlapped) | 6 hrs | 30 min | ~16 hrs |
+| **Round 3** | 7 hrs (2 sol each) | 2 hrs (overlapped) | 5 hrs | 30 min | ~14.5 hrs |
+| **Total** | | | | | **~42 hrs** |
 
-Training gets faster each round because the model makes fewer mistakes → fewer pairs → less to train on.
+Round 1 is fast: 1 generation per problem, no Gemini, always use Nemotron gold as chosen. Rounds 2–3 generate 2 solutions and use Gemini to judge.
 
 ---
 
@@ -295,9 +321,9 @@ from trl import DPOTrainer, DPOConfig
 from datasets import Dataset
 
 round_configs = [
-    {"temp": 0.7, "lr": 5e-7, "beta": 0.10},
-    {"temp": 0.8, "lr": 3e-7, "beta": 0.12},
-    {"temp": 0.9, "lr": 2e-7, "beta": 0.15},
+    {"temp": 0.7, "lr": 5e-7, "beta": 0.10, "n": 1, "use_gemini": False},
+    {"temp": 0.8, "lr": 3e-7, "beta": 0.12, "n": 2, "use_gemini": True},
+    {"temp": 0.9, "lr": 2e-7, "beta": 0.15, "n": 2, "use_gemini": True},
 ]
 
 for round_num, cfg in enumerate(round_configs):
@@ -306,102 +332,116 @@ for round_num, cfg in enumerate(round_configs):
     print(f"{'='*60}\n")
 
     # ── GENERATE ──────────────────────────────
-    # Use vLLM for fast batch inference
-    # Must reload each round with updated weights
-    
-    if round_num > 0:
-        # Load the LoRA checkpoint from previous round
-        # into a fresh vLLM instance
-        pass  # Implementation depends on merged vs adapter loading
-
     FastLanguageModel.for_inference(model)
-    
-    # Collect all prompts
+
     prompts = [
         format_math_prompt(ex["question"]) for ex in train_set
     ]
-    
+
     sampling = SamplingParams(
         temperature=cfg["temp"],
         top_p=0.95,
         top_k=20,
         max_tokens=4096,
-        n=2,
+        n=cfg["n"],  # Round 1: 1 solution, Rounds 2-3: 2 solutions
     )
-    
-    print("  Generating trajectories...")
-    all_outputs = []  # Use vLLM batch generation here
-    # all_outputs = llm.generate(prompts, sampling)
 
-    # ── JUDGE ─────────────────────────────────
-    # Build items for Gemini
-    judge_items = []
-    for i, output in enumerate(all_outputs):
-        example = train_set[i]
-        for j, completion in enumerate(output.outputs):
-            judge_items.append({
-                "problem_idx": i,
-                "solution_idx": j,
-                "solution": completion.text,
-                "ground_truth": example["answer"],
-            })
+    print(f"  Generating {cfg['n']} solution(s) per problem...")
+    all_outputs = llm.generate(prompts, sampling)
 
-    print(f"  Judging {len(judge_items)} solutions with Gemini Flash...")
-    judgments = asyncio.run(judge_batch(judge_items, concurrency=50))
+    # ── ROUND 1: Always use Nemotron gold as chosen ──
+    if not cfg["use_gemini"]:
+        pairs = []
+        skipped = 0
 
-    # ── BUILD PAIRS ───────────────────────────
-    pairs = []
-    skipped = 0
+        for i, output in enumerate(all_outputs):
+            example = train_set[i]
+            prompt = prompts[i]
+            sol = output.outputs[0].text
 
-    for i in range(len(all_outputs)):
-        example = train_set[i]
-        prompt = prompts[i]
+            pred = extract_boxed_answer(sol)
+            if check_answer(pred, example["answer"]):
+                skipped += 1  # Model got it right, skip
+                continue
 
-        sol_a = all_outputs[i].outputs[0].text
-        sol_b = all_outputs[i].outputs[1].text
-
-        idx_a = i * 2
-        idx_b = i * 2 + 1
-
-        # Get Gemini scores (with regex fallback)
-        if judgments[idx_a] is not None:
-            score_a = judgments[idx_a]["score"]
-        else:
-            pred_a = extract_boxed_answer(sol_a)
-            score_a = 1.0 if check_answer(pred_a, example["answer"]) else 0.0
-
-        if judgments[idx_b] is not None:
-            score_b = judgments[idx_b]["score"]
-        else:
-            pred_b = extract_boxed_answer(sol_b)
-            score_b = 1.0 if check_answer(pred_b, example["answer"]) else 0.0
-
-        # Pair construction
-        if abs(score_a - score_b) < 0.1:
-            skipped += 1
-            continue
-        elif score_a > score_b:
+            # Wrong → pair with Nemotron 120B gold
             pairs.append({
                 "prompt": prompt,
-                "chosen": sol_a,
-                "rejected": sol_b,
-            })
-        else:
-            pairs.append({
-                "prompt": prompt,
-                "chosen": sol_b,
-                "rejected": sol_a,
+                "chosen": example["solution"],  # Always Nemotron gold
+                "rejected": sol,                # Model's wrong attempt
             })
 
-        # Both bad → use Nemotron gold
-        if score_a < 0.3 and score_b < 0.3:
-            pairs.append({
-                "prompt": prompt,
-                "chosen": example["solution"],
-                "rejected": sol_a if score_a <= score_b else sol_b,
-            })
+        print(f"  Round 1: {len(pairs)} pairs, skipped {skipped} correct")
 
-    print(f"  Built {len(pairs)} pairs, skipped {skipped}")
+    # ── ROUNDS 2-3: Gemini judges model vs model ─────
+    else:
+        # Build items for Gemini
+        judge_items = []
+        for i, output in enumerate(all_outputs):
+            example = train_set[i]
+            for j, completion in enumerate(output.outputs):
+                judge_items.append({
+                    "problem_idx": i,
+                    "solution_idx": j,
+                    "solution": completion.text,
+                    "ground_truth": example["answer"],
+                })
+
+        print(f"  Judging {len(judge_items)} solutions with Gemini Flash...")
+        judgments = asyncio.run(judge_batch(judge_items, concurrency=50))
+
+        # Build pairs from Gemini scores
+        pairs = []
+        skipped = 0
+
+        for i in range(len(all_outputs)):
+            example = train_set[i]
+            prompt = prompts[i]
+
+            sol_a = all_outputs[i].outputs[0].text
+            sol_b = all_outputs[i].outputs[1].text
+
+            idx_a = i * 2
+            idx_b = i * 2 + 1
+
+            # Get Gemini scores (with regex fallback)
+            if judgments[idx_a] is not None:
+                score_a = judgments[idx_a]["score"]
+            else:
+                pred_a = extract_boxed_answer(sol_a)
+                score_a = 1.0 if check_answer(pred_a, example["answer"]) else 0.0
+
+            if judgments[idx_b] is not None:
+                score_b = judgments[idx_b]["score"]
+            else:
+                pred_b = extract_boxed_answer(sol_b)
+                score_b = 1.0 if check_answer(pred_b, example["answer"]) else 0.0
+
+            # Both bad → use Nemotron gold
+            if score_a < 0.3 and score_b < 0.3:
+                pairs.append({
+                    "prompt": prompt,
+                    "chosen": example["solution"],
+                    "rejected": sol_a if score_a <= score_b else sol_b,
+                })
+                continue
+
+            # Too close → skip
+            if abs(score_a - score_b) < 0.1:
+                skipped += 1
+                continue
+
+            # Clear winner
+            if score_a > score_b:
+                pairs.append({
+                    "prompt": prompt, "chosen": sol_a, "rejected": sol_b,
+                })
+            else:
+                pairs.append({
+                    "prompt": prompt, "chosen": sol_b, "rejected": sol_a,
+                })
+
+        print(f"  Round {round_num+1}: {len(pairs)} pairs, skipped {skipped}")
 
     # ── TRAIN DPO ─────────────────────────────
     FastLanguageModel.for_training(model)
@@ -464,11 +504,11 @@ for round_num, cfg in enumerate(round_configs):
 
 | Item | Cost |
 |---|---:|
-| Gemini Flash — Round 1 (~880K judgments) | ~$65 |
-| Gemini Flash — Round 2 (~700K judgments) | ~$50 |
-| Gemini Flash — Round 3 (~500K judgments) | ~$40 |
-| H200 compute (~47 hrs × ~$3-5/hr) | ~$140–235 |
-| **Total** | **~$295–390** |
+| Gemini Flash — Round 1 | $0 (no Gemini, regex only) |
+| Gemini Flash — Round 2 (~880K judgments) | ~$65 |
+| Gemini Flash — Round 3 (~700K judgments) | ~$50 |
+| H200 compute (~42 hrs × ~$3-5/hr) | ~$125–210 |
+| **Total** | **~$240–325** |
 
 ---
 
@@ -511,8 +551,8 @@ Flash is 15× cheaper and 3× faster. For binary judging ("is answer correct + i
 **Why iterative (3 rounds), not 3 epochs on static pairs?**
 Same data for 3 epochs → overfitting to specific errors. Re-generating each round → fresh pairs from the improved model → different errors → better generalization.
 
-**Why generate 2 solutions, not 4?**
-2 is the minimum for a DPO pair. 4 would give richer signal but double generation time. Since generation is the bottleneck (~7 hrs/round), keeping it at 2 saves ~14 hours total.
+**Why generate 1 solution in Round 1, then 2 in Rounds 2–3?**
+Round 1 always uses Nemotron gold as chosen — you only need the model's wrong attempt as rejected. One generation is enough. Rounds 2–3 compare two model outputs against each other (with Gemini judging quality), so you need 2. This saves ~3.5 hours in Round 1.
 
 **Why merge + upload after each round?**
 Insurance. If Round 3 somehow degrades (unlikely with DPO but possible), you still have Round 2 checkpoint on Kaggle ready to submit.
