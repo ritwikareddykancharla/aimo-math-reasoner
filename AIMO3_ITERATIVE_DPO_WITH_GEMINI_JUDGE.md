@@ -161,7 +161,7 @@ Submit all 3 to the leaderboard and pick the best scorer.
 ```python
 # Install
 # pip install --upgrade unsloth unsloth_zoo
-# pip install trl datasets google-cloud-aiplatform vllm
+# pip install trl datasets google-genai vllm
 
 import os
 os.environ["UNSLOTH_VLLM_STANDBY"] = "1"
@@ -229,22 +229,20 @@ def check_answer(predicted, ground_truth):
 
 ```python
 import asyncio
-import vertexai
-from vertexai.generative_models import GenerativeModel
+import os
+from google import genai
+from google.genai.types import HttpOptions
 
-vertexai.init(project="your-gcp-project", location="us-central1")
+# Set environment variables for Vertex AI
+os.environ["GOOGLE_CLOUD_PROJECT"] = "your-gcp-project"
+os.environ["GOOGLE_CLOUD_LOCATION"] = "global"
+os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
 
-async def judge_batch(items, concurrency=50):
-    semaphore = asyncio.Semaphore(concurrency)
-    gemini = GenerativeModel("gemini-2.5-flash")
+client = genai.Client(http_options=HttpOptions(api_version="v1"))
 
-    async def judge_one(item):
-        async with semaphore:
-            try:
-                response = await gemini.generate_content_async(f"""
-Math problem answer: {item["ground_truth"]}
+JUDGE_PROMPT = """Math problem answer: {ground_truth}
 
-Solution: {item["solution"][:3000]}
+Solution: {solution}
 
 Is the answer correct AND is the reasoning valid?
 Reply ONLY with JSON:
@@ -254,12 +252,38 @@ Scoring:
 1.0 = correct answer + sound reasoning
 0.5 = correct answer but flawed/lucky reasoning
 0.3 = wrong answer but good partial reasoning
-0.0 = wrong answer + bad reasoning""")
-                return json.loads(response.text)
-            except:
-                return None
+0.0 = wrong answer + bad reasoning"""
 
-    tasks = [judge_one(item) for item in items]
+
+def judge_one(item):
+    """Synchronous single judgment"""
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=JUDGE_PROMPT.format(
+                ground_truth=item["ground_truth"],
+                solution=item["solution"][:3000],
+            ),
+        )
+        return json.loads(response.text)
+    except:
+        return None
+
+
+async def judge_batch(items, concurrency=50):
+    """
+    Parallel judging using asyncio + thread pool.
+    google-genai SDK is synchronous, so we wrap in threads.
+    50 concurrent calls → 880K items in ~2-3 hours.
+    """
+    semaphore = asyncio.Semaphore(concurrency)
+    loop = asyncio.get_event_loop()
+
+    async def judge_one_async(item):
+        async with semaphore:
+            return await loop.run_in_executor(None, judge_one, item)
+
+    tasks = [judge_one_async(item) for item in items]
     return await asyncio.gather(*tasks)
 ```
 
