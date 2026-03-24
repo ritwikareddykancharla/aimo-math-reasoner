@@ -102,7 +102,10 @@ def main():
         "trainer.resume_mode=auto",
         f"trainer.default_local_dir={r['ckpt_dir']}",
         "trainer.max_actor_ckpt_to_keep=3",
+        # Add all of these to cmd:
         "actor_rollout_ref.actor.ppo_mini_batch_size=32",
+        "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2",
+        "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=2",
     ]
     print(f"Command:\n  {' '.join(cmd)}\n")
     subprocess.run(cmd, check=True)
