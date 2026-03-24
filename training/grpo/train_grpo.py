@@ -102,6 +102,7 @@ def main():
         "trainer.resume_mode=auto",
         f"trainer.default_local_dir={r['ckpt_dir']}",
         "trainer.max_actor_ckpt_to_keep=3",
+        "actor_rollout_ref.actor.ppo_mini_batch_size=32",
     ]
     print(f"Command:\n  {' '.join(cmd)}\n")
     subprocess.run(cmd, check=True)
