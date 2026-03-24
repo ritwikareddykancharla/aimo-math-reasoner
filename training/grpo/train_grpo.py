@@ -70,7 +70,7 @@ def main():
         # Model
         f"actor_rollout_ref.model.path={r['model']}",
         "actor_rollout_ref.model.trust_remote_code=true",
-
+      
         # Rollout (vLLM)
         "actor_rollout_ref.rollout.name=vllm",
         "actor_rollout_ref.rollout.n=8",
@@ -79,6 +79,7 @@ def main():
         "actor_rollout_ref.rollout.temperature=1.0",
         "actor_rollout_ref.rollout.top_p=1.0",
         "actor_rollout_ref.rollout.max_num_batched_tokens=8192",
+        "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=2",  # ← add this,
 
         # Actor
         "actor_rollout_ref.actor.ppo_mini_batch_size=32",
