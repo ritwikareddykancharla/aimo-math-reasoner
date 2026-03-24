@@ -95,7 +95,10 @@ def is_hard(example):
     return get_acc_high_with_tool(example) is not None
 
 def compress_messages(messages):
-    """Collapse multi-turn tool conversation into 2-turn (user, assistant)."""
+    """Collapse multi-turn tool conversation into 2-turn (user, assistant).
+    Handles HuggingFace Arrow-backed arrays, numpy strings, and plain dicts.
+    """
+    # Unwrap Arrow/numpy array types
     if hasattr(messages, "tolist"):
         messages = messages.tolist()
     if not isinstance(messages, list) or len(messages) == 0:
@@ -105,21 +108,34 @@ def compress_messages(messages):
     assistant_parts = []
 
     for m in messages:
+        # Handle Arrow-backed dicts (may come as dict-like objects)
+        if hasattr(m, "as_py"):
+            m = m.as_py()
         if not isinstance(m, dict):
+            try:
+                m = dict(m)
+            except Exception:
+                continue
+
+        role    = str(m.get("role") or "").strip()
+        content = str(m.get("content") or "").strip()
+
+        if not role:
             continue
-        role    = m.get("role", "")
-        content = str(m.get("content", ""))
 
         if role == "user" and user_content is None:
             user_content = content
         elif role == "assistant":
-            assistant_parts.append(content)
+            if content:  # skip empty assistant turns
+                assistant_parts.append(content)
         elif role == "tool":
-            assistant_parts.append(f"\nOutput:\n```\n{content}\n```\n")
-        elif role == "user":
-            assistant_parts.append(f"\n[Context: {content}]\n")
+            if content:
+                assistant_parts.append(f"\nOutput:\n```\n{content}\n```\n")
+        elif role == "user" and user_content is not None:
+            if content:
+                assistant_parts.append(f"\n[Context: {content}]\n")
 
-    if user_content is None or not assistant_parts:
+    if not user_content or not assistant_parts:
         return None
 
     return {"user": user_content, "assistant": "\n".join(assistant_parts)}
@@ -178,6 +194,11 @@ for split_name in args.splits:
     df = ds.to_pandas()
     del ds; gc.collect()
 
+    # Normalize string columns (Arrow strings → Python str)
+    for col in ["uuid", "problem", "expected_answer", "data_source"]:
+        if col in df.columns:
+            df[col] = df[col].apply(lambda x: str(x) if x is not None else "")
+
     # Extract accuracy
     df["_acc"] = df.apply(
         lambda row: get_acc_high_with_tool(row.to_dict()), axis=1
@@ -224,11 +245,17 @@ dfs = [pd.read_pickle(p) for p in chunk_paths]
 for p, d in zip(chunk_paths, dfs):
     print(f"  {os.path.basename(p)}: {len(d):,} rows")
 combined = pd.concat(dfs, ignore_index=True)
-print(f"\n  Combined: {len(combined):,} rows | Unique problems: {combined['uuid'].nunique():,}")
+# Use problem text as dedup key — uuid has Arrow type issues with hashing
+# Hash the problem text to get a stable key
+combined["_problem_key"] = combined["problem"].apply(
+    lambda x: str(x).strip()[:500]  # truncate to avoid memory issues
+)
+print(f"\n  Combined: {len(combined):,} rows | Unique problems: {combined['_problem_key'].nunique():,}")
 
 # Deduplicate: keep shortest trajectory per problem (less noise)
 combined = combined.sort_values("_n_words", ascending=True)
-best = combined.drop_duplicates(subset="uuid", keep="first").copy()
+best = combined.drop_duplicates(subset="_problem_key", keep="first").copy()
+best = best.drop(columns=["_problem_key"])
 print(f"  Deduped: {len(combined):,} → {len(best):,} (1 per problem)")
 
 
