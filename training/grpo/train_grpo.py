@@ -25,7 +25,7 @@ ROUNDS = {
     1: {
         "data":       os.path.join(DATA_ROOT, "grpo_aops_acc0125.parquet"),
         "experiment": "gpt-oss-120b-round1",
-        "model":      "openai/gpt-oss-120b",
+        "model": "unsloth/gpt-oss-120b",  # instead of openai/gpt-oss-120b
         "ckpt_dir":   os.path.join(CKPT_ROOT, "grpo-round1"),
     },
     2: {
