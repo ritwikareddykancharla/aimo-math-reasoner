@@ -259,6 +259,14 @@ if tokenizer.pad_token is None:
 log(f"  Model loaded: {MODEL_NAME}")
 log(f"  Parameters: {sum(p.numel() for p in model.parameters())/1e9:.1f}B")
 
+# Free HF cache to reclaim disk (~57GB)
+for d in ["datasets", "hub"]:
+    p = os.path.expanduser(f"~/.cache/huggingface/{d}")
+    if os.path.exists(p):
+        shutil.rmtree(p)
+        log(f"  Cleared cache: {p}")
+gc.collect()
+
 # ============================================================
 # LOAD & FORMAT DATASET
 # ============================================================
