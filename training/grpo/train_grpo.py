@@ -46,7 +46,6 @@ def main():
 
     r = ROUNDS[args.round]
 
-    # Validate inputs
     if not os.path.exists(r["data"]):
         raise FileNotFoundError(f"Data not found: {r['data']}")
     if args.round > 1 and not os.path.exists(r["model"]):
@@ -67,8 +66,12 @@ def main():
         "python3.12", "-m", "verl.trainer.main_ppo",
         f"--config-path={VERL_CONFIG}",
         "--config-name=ppo_trainer",
+
+        # Model
         f"actor_rollout_ref.model.path={r['model']}",
         "actor_rollout_ref.model.trust_remote_code=true",
+
+        # Rollout (vLLM)
         "actor_rollout_ref.rollout.name=vllm",
         "actor_rollout_ref.rollout.n=8",
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
@@ -76,21 +79,35 @@ def main():
         "actor_rollout_ref.rollout.temperature=1.0",
         "actor_rollout_ref.rollout.top_p=1.0",
         "actor_rollout_ref.rollout.max_num_batched_tokens=8192",
+
+        # Actor
+        "actor_rollout_ref.actor.ppo_mini_batch_size=32",
+        "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2",
         "actor_rollout_ref.actor.use_kl_loss=true",
         "actor_rollout_ref.actor.kl_loss_coef=0.001",
         "actor_rollout_ref.actor.kl_loss_type=low_var_kl",
         "actor_rollout_ref.actor.use_remove_padding=true",
-        "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2",  # ← added
         "actor_rollout_ref.actor.optim.lr=5e-7",
+
+        # Reference model
+        "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=2",
+
+        # Algorithm
         "algorithm.adv_estimator=grpo",
+
+        # Data
         f"data.train_files={r['data']}",
         f"data.val_files={r['data']}",
         "data.train_batch_size=32",
         "data.max_prompt_length=512",
         "data.max_response_length=2048",
-        "reward.reward_model.enable=false",                        # ← fixed path
-        f"reward.custom_reward_function.path={REWARD_FN}",        # ← fixed path
-        "reward.custom_reward_function.name=compute_reward",      # ← fixed path
+
+        # Reward
+        "reward.reward_model.enable=false",
+        f"reward.custom_reward_function.path={REWARD_FN}",
+        "reward.custom_reward_function.name=compute_reward",
+
+        # Trainer
         "trainer.nnodes=1",
         "trainer.n_gpus_per_node=8",
         "trainer.total_epochs=1",
@@ -102,11 +119,8 @@ def main():
         "trainer.resume_mode=auto",
         f"trainer.default_local_dir={r['ckpt_dir']}",
         "trainer.max_actor_ckpt_to_keep=3",
-        # Add all of these to cmd:
-        "actor_rollout_ref.actor.ppo_mini_batch_size=32",
-        "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2",
-        "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=2",
     ]
+
     print(f"Command:\n  {' '.join(cmd)}\n")
     subprocess.run(cmd, check=True)
 
