@@ -71,9 +71,12 @@ def main():
         "actor_rollout_ref.model.trust_remote_code=true",
         "actor_rollout_ref.rollout.name=vllm",
         "actor_rollout_ref.rollout.n=8",
-        "actor_rollout_ref.rollout.tensor_parallel_size=8",
+        "actor_rollout_ref.rollout.tensor_model_parallel_size=8",  # ← fixed
         "actor_rollout_ref.rollout.gpu_memory_utilization=0.4",
         "actor_rollout_ref.rollout.temperature=1.0",
+        "actor_rollout_ref.rollout.top_p=1.0",
+        "actor_rollout_ref.rollout.max_num_batched_tokens=8192",
+        "actor_rollout_ref.rollout.ignore_eos=false",
         "actor_rollout_ref.actor.use_kl_loss=true",
         "actor_rollout_ref.actor.kl_loss_coef=0.001",
         "actor_rollout_ref.actor.kl_loss_type=low_var_kl",
@@ -100,7 +103,6 @@ def main():
         f"trainer.default_local_dir={r['ckpt_dir']}",
         "trainer.max_actor_ckpt_to_keep=3",
     ]
-
     print(f"Command:\n  {' '.join(cmd)}\n")
     subprocess.run(cmd, check=True)
 
