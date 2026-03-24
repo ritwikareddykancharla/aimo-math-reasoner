@@ -76,9 +76,6 @@ def clear_hf_cache():
             shutil.rmtree(p)
     gc.collect()
 
-def has_tools(example):
-    t = example.get("tools")
-    return t is not None and (not isinstance(t, list) or len(t) > 0)
 
 def get_acc_high_with_tool(example):
     """Extract reason_high_with_tool accuracy. Returns None if not hard."""
@@ -167,12 +164,7 @@ for split_name in args.splits:
     ds = load_dataset(HF_DATASET, token=HF_TOKEN, split=split_name)
     print(f"  Loaded {len(ds):,} rows in {time.time()-t0:.0f}s")
 
-    # Filter 1: with-tool only
-    before = len(ds)
-    ds = ds.filter(has_tools, num_proc=4)
-    print(f"  Tool filter:  {before:,} → {len(ds):,}")
-
-    # Filter 2: hard (reason_high_with_tool < 0.5)
+    # Filter: hard (reason_high_with_tool < 0.5)
     before = len(ds)
     ds = ds.filter(is_hard, num_proc=4)
     print(f"  Hard filter:  {before:,} → {len(ds):,}")
