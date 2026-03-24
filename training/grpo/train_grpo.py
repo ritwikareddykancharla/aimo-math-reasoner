@@ -7,13 +7,20 @@ Usage:
   Round 3: python3.12 training/grpo/train_grpo.py --round 3
 
 Model:
-  Uses unsloth/gpt-oss-120b (bf16/U8) instead of openai/gpt-oss-120b (MXFP4)
-  because the original requires custom kernels not available in standard vLLM.
-  Same model, same architecture, works out of the box with veRL.
+  Uses unsloth/gpt-oss-120b (bf16/U8) — works with standard vLLM/veRL.
+  openai/gpt-oss-120b requires custom MXFP4 kernels not available here.
 
 Strategy:
-  - vLLM rollout  → bf16 (no quantization, clean and compatible)
+  - vLLM rollout  → bf16, gpu_memory_utilization=0.2 (leaves room for FSDP wake_up)
   - FSDP training → bf16 (clean gradients)
+
+Memory budget per GPU (80GB):
+  vLLM reserved:   ~16GB  (0.2 × 80GB)
+  FSDP weights:    ~10GB  (65GB ÷ 8 GPUs)
+  FSDP gradients:  ~10GB
+  FSDP optimizer:  ~20GB  (AdamW states)
+  Activations:     ~10GB
+  Total:           ~66GB  ✅ ~14GB headroom
 """
 
 import subprocess
@@ -77,26 +84,25 @@ def main():
         "--config-name=ppo_trainer",
 
         # ── Model ────────────────────────────────────────────────
-        # unsloth version: bf16/U8, no custom kernels needed
-        # rounds 2+ use your own trained checkpoints (already bf16)
         f"actor_rollout_ref.model.path={r['model']}",
         "actor_rollout_ref.model.trust_remote_code=true",
 
-        # ── Rollout (vLLM) — plain bf16 ──────────────────────────
-        # No quantization — avoids all kernel/compat issues
-        # gpu_memory_utilization=0.3 leaves room for FSDP during init
+        # ── Rollout (vLLM) — bf16, low memory reservation ────────
+        # gpu_memory_utilization=0.2 → vLLM reserves ~16GB per GPU
+        # leaves ~64GB for FSDP training pass
+        # prevents OOM when vLLM wakes up after FSDP step
         "actor_rollout_ref.rollout.name=vllm",
         "actor_rollout_ref.rollout.n=8",
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.3",
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.2",    # lowered from 0.3
         "actor_rollout_ref.rollout.temperature=1.0",
         "actor_rollout_ref.rollout.top_p=1.0",
         "actor_rollout_ref.rollout.max_num_batched_tokens=8192",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=2",
 
         # ── Actor (FSDP) — bf16 training ─────────────────────────
-        # model-only checkpoint (~65GB) not optimizer states (~700GB)
-        # param_offload helps during FSDP init on large models
+        # no param_offload — causes conflicts with cumem_allocator
+        # model-only checkpoint saves (~65GB not ~700GB)
         "actor_rollout_ref.actor.ppo_mini_batch_size=32",
         "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2",
         "actor_rollout_ref.actor.use_kl_loss=true",
@@ -106,7 +112,6 @@ def main():
         "actor_rollout_ref.actor.optim.lr=5e-7",
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
-        "actor_rollout_ref.actor.fsdp_config.param_offload=true",
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
         # ── Reference model (FSDP) — bf16, forward only ─────────
@@ -143,8 +148,10 @@ def main():
         "trainer.max_actor_ckpt_to_keep=3",
     ]
 
-    # Clean env — no PYTORCH_ALLOC_CONF as it conflicts with vLLM memory pool
+    # Clean env — no PYTORCH_ALLOC_CONF, conflicts with vLLM cumem_allocator
     env = os.environ.copy()
+    env.pop("PYTORCH_CUDA_ALLOC_CONF", None)
+    env.pop("PYTORCH_ALLOC_CONF", None)
 
     print(f"Command:\n  {' '.join(cmd)}\n")
     subprocess.run(cmd, check=True, env=env)
