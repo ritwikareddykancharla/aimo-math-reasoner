@@ -4,9 +4,11 @@ AIMO3: Full Fine-Tuning on 8× H100 (DeepSpeed ZeRO-3)
 NO LoRA. NO quantization. Full parameter training on all 120B params.
 DeepSpeed ZeRO Stage 3 shards model across 8 GPUs.
 
+Dataset: v4 (79K hard problems, all sources, reason_high_with_tool < 0.5)
+Upsampling: acc=0.125 → 4x, acc=0.25 → 2x, acc=0.375 → 1x (~193K effective)
+
 Setup (run once on the instance):
     pip install deepspeed transformers trl datasets accelerate torch
-    # If using flash attention:
     pip install flash-attn --no-build-isolation
 
 Launch:
@@ -23,7 +25,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 KAGGLE_USERNAME = os.environ.get("KAGGLE_USERNAME", "")
-DATA_DIR = os.environ.get("DATA_DIR", "./data/nemotron-sft-high-medium-tools/hf_dataset")
+DATA_DIR = os.environ.get("DATA_DIR", "./data/nemotron-sft-v4/hf_dataset")
 
 # ============================================================
 # W&B
@@ -252,7 +254,7 @@ if IS_MAIN and KAGGLE_USERNAME:
     log("\n  Uploading to Kaggle...")
     try:
         import kagglehub
-        handle = f"{KAGGLE_USERNAME}/gpt-oss-120b-aimo3-full-ft/transformers/default"
+        handle = f"{KAGGLE_USERNAME}/gpt-oss-120b-aimo3-sft-v4/transformers/default"
         t0 = time.time()
         kagglehub.model_upload(
             handle, save_dir,
