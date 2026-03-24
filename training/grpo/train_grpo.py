@@ -70,16 +70,16 @@ def main():
         # Model
         f"actor_rollout_ref.model.path={r['model']}",
         "actor_rollout_ref.model.trust_remote_code=true",
-      
+
         # Rollout (vLLM)
         "actor_rollout_ref.rollout.name=vllm",
         "actor_rollout_ref.rollout.n=8",
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.4",
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.3",   # lowered from 0.4
         "actor_rollout_ref.rollout.temperature=1.0",
         "actor_rollout_ref.rollout.top_p=1.0",
         "actor_rollout_ref.rollout.max_num_batched_tokens=8192",
-        "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=2",  # ← add this,
+        "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=2",
 
         # Actor
         "actor_rollout_ref.actor.ppo_mini_batch_size=32",
@@ -89,9 +89,12 @@ def main():
         "actor_rollout_ref.actor.kl_loss_type=low_var_kl",
         "actor_rollout_ref.actor.use_remove_padding=true",
         "actor_rollout_ref.actor.optim.lr=5e-7",
+        "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",   # fix fp32 OOM
+        "actor_rollout_ref.actor.fsdp_config.offload_policy=true",    # offload during init
 
         # Reference model
         "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=2",
+        "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",     # fix fp32 OOM
 
         # Algorithm
         "algorithm.adv_estimator=grpo",
@@ -122,8 +125,12 @@ def main():
         "trainer.max_actor_ckpt_to_keep=3",
     ]
 
+    # Set env vars to help with memory fragmentation
+    env = os.environ.copy()
+    env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
     print(f"Command:\n  {' '.join(cmd)}\n")
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, env=env)
 
 
 if __name__ == "__main__":
