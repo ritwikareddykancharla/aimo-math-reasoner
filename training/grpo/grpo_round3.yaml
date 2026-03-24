@@ -1,47 +1,87 @@
-# GRPO Round 1 — AoPS hardest problems (acc=0.125)
-# Launch: python3.12 -m verl.trainer.main_ppo --config-path=training/grpo --config-name=grpo_round3
+# AIMO3 GRPO Round 1 — AoPS hardest problems (acc=0.125)
+# Based on VERL 0.7.1 ppo_trainer.yaml defaults
+
+defaults:
+  - model_engine: dp
+  - actor@actor_rollout_ref.actor: dp_actor
+  - data@data: legacy_data
+  - ref@actor_rollout_ref.ref: dp_ref
+  - rollout@actor_rollout_ref.rollout: rollout
+  - model@actor_rollout_ref.model: hf_model
+  - critic@critic: dp_critic
+  - legacy_reward_impl
+  - reward@reward: reward
+  - algorithm@algorithm.rollout_correction: rollout_correction
+  - _self_
 
 data:
-  train_files: ./data/grpo_aops_acc0375.parquet
+  train_files: /home/ssm-user/aimo-math-reasoner/data/grpo_aops_acc0375.parquet
+  val_files: /home/ssm-user/aimo-math-reasoner/data/grpo_aops_acc0375.parquet
   train_batch_size: 32
   max_prompt_length: 512
   max_response_length: 2048
+  filter_overlong_prompts: true
+  truncation: error
 
 algorithm:
   adv_estimator: grpo
+  gamma: 1.0
+  lam: 1.0
+  norm_adv_by_std_in_grpo: true
+  use_kl_in_reward: false
+  kl_penalty: kl
+  kl_ctrl:
+    type: fixed
+    kl_coef: 0.001
 
 actor_rollout_ref:
+  hybrid_engine: true
+  nccl_timeout: 600
+
   model:
     path: openai/gpt-oss-120b
-    trust_remote_code: True
+    trust_remote_code: true
 
   rollout:
-    n: 8                          # 8 responses per problem
     name: vllm
+    n: 8
     tensor_parallel_size: 8
     gpu_memory_utilization: 0.4
     temperature: 1.0
     top_p: 1.0
+    max_num_batched_tokens: 8192
+    layered_summon: false
 
   actor:
-    use_kl_loss: True
+    use_kl_loss: true
     kl_loss_coef: 0.001
     kl_loss_type: low_var_kl
-    use_remove_padding: True
+    use_remove_padding: true
     optim:
       lr: 5e-7
       min_lr_ratio: 0.1
+      warmup_steps: 20
+
+reward_model:
+  enable: false
 
 custom_reward_function:
-  path: ./training/grpo/reward_fn.py
+  path: /home/ssm-user/aimo-math-reasoner/training/grpo/reward_fn.py
   name: compute_reward
 
 trainer:
+  nnodes: 1
   n_gpus_per_node: 8
+  total_epochs: 1
   project_name: aimo3-grpo
   experiment_name: gpt-oss-120b-round3
   logger:
     - wandb
     - console
   save_freq: 50
-  total_epochs: 1
+  val_before_train: false
+  test_freq: -1
+  resume_mode: auto
+  default_local_dir: /home/ssm-user/aimo-math-reasoner/checkpoints/grpo-round3
+  max_actor_ckpt_to_keep: 3
+  device: cuda
