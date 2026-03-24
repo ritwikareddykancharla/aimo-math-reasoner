@@ -1,146 +1,159 @@
 # AIMO3 — Fine-Tuning GPT-OSS-120B for Mathematical Reasoning
 
-> **Competition**: [AI Mathematical Olympiad — Progress Prize 3](https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3) (Kaggle)
+> **Competition**: [AI Mathematical Olympiad — Progress Prize 3](https://www.kaggle.com/competitions/ai-mathematical-olympiad-progress-prize-3)
 > **Goal**: Improve pass@1 consistency on olympiad-level math problems
-> **Model**: GPT-OSS-120B (Mixture-of-Experts, 120B parameters)
-> **Hardware**: 8× NVIDIA H100 (AWS) + 1× NVIDIA H200 (GPU Droplet)
+> **Model**: GPT-OSS-120B (MoE, 120B parameters)
+> **Hardware**: 8× NVIDIA H100 (AWS) + 1× NVIDIA H200
 
 ---
 
 ## The Problem
 
-The base GPT-OSS-120B model **already solves nearly every problem** — scoring **42/50** with majority voting across 8 samples. But pass@1 accuracy is significantly lower, meaning the model *can* find the correct solution but doesn't do so *consistently*.
+The base GPT-OSS-120B model already scores **42/50** with majority voting (8 samples). However, pass@1 is significantly lower — the model *can* solve nearly every problem, it just doesn't do so *consistently*.
 
 | Metric | Score | What It Means |
 |--------|-------|---------------|
-| pass@1 | Low | Model often picks wrong reasoning path on first try |
-| pass@8 (majority vote) | **42/50** | Correct answer exists *somewhere* in 8 attempts |
-| pass@100 | ~50/50 | Model can solve virtually everything given enough tries |
+| pass@1 | Low | Model often picks wrong reasoning path first try |
+| pass@8 majority vote | **42/50** | Correct answer exists in 8 attempts |
+| pass@100 | ~50/50 | Given enough tries, model solves everything |
 
-**The gap between pass@1 and pass@8 is the problem we're solving.** The model has the *capability* — it just lacks *consistency*. We need it to pick the right trajectory on the first attempt, every time.
+**Goal**: Close the gap between pass@1 and pass@8 — teach the model to pick the right trajectory the first time.
 
-## Our Approach
+---
 
-### Core Insight
+## Training Approach
+
 > *Don't teach the model new knowledge — teach it to consistently choose the trajectories it already knows work.*
 
-We fine-tune **only on hard problems where majority voting fails** (accuracy < 0.5). These are problems where fewer than 4 out of 8 attempts produce the correct answer. Training on these forces the model to internalize the successful reasoning patterns for its weakest problems.
+We fine-tune **only on hard AoPS competition problems where majority voting fails** (`reason_high_with_tool < 0.5`). These are problems where fewer than 4 out of 8 high-reasoning-depth attempts produce the correct answer.
 
-### Training Pipeline
+### Methods (in order of priority)
 
+| Method | Strategy |
+|--------|----------|
+| **SFT** | Train on correct high-reasoning trajectories for hard problems |
+| **GRPO** | RL reward for correct answers, penalize incorrect; group relative optimization |
+| **DPO** | Prefer high-quality trajectories over low-quality ones (Gemini judge) |
+
+---
+
+## Dataset — Nemotron-Math-v2 SFT v3
+
+### Why This Filtering
+
+The `nvidia/Nemotron-Math-v2` dataset contains 7M+ trajectories across 347K problems, solved under 6 configurations (high/medium/low reasoning × with/without Python tools). We apply strict filters to get only the most relevant training signal:
+
+| Filter | Value | Why |
+|--------|-------|-----|
+| **Splits** | `high_part00`, `high_part01` only | High reasoning depth trajectories = best quality. `high_part02` is 100% StackExchange → skipped. `medium` = lower quality trajectories for the same problems. |
+| **Source** | `aops` only | AoPS = Art of Problem Solving = competition math. StackExchange is university/research math — different domain from AIMO. |
+| **Accuracy key** | `reason_high_with_tool` | Competition inference uses `ReasoningEffort.HIGH` + Python tools. This is the exact evaluation setting. |
+| **Difficulty** | `acc < 0.5` | Only problems where majority vote at high reasoning fails. Easy problems (acc ≥ 0.5) don't need SFT. |
+| **Trajectories** | With-tool only | Competition notebook always has Python sandbox available. |
+| **Dedup** | Shortest correct trajectory per problem | Less noise, faster inference, cleaner signal. |
+
+### Dataset Stats (v3)
+
+| Accuracy | Count | What It Means |
+|----------|-------|---------------|
+| 0.125 | ~20K | Model gets it right 1/8 times — very hard |
+| 0.25 | ~30K | Model gets it right 2/8 times — hard |
+| 0.375 | ~47K | Model gets it right 3/8 times — moderate |
+| **Total** | **~97K** | Hard AoPS problems, high-reasoning trajectories |
+
+> Source splits: `high_part00` (100% AoPS, ~40K hard) + `high_part01` (AoPS subset, ~57K hard)
+
+### Raw Data Breakdown (from EDA)
+
+| Split | Total Rows | AoPS | StackExchange | Hard @ high_with_tool | Used? |
+|-------|-----------|------|---------------|----------------------|-------|
+| high_part00 | 696K | **100%** | 0% | 40K (5.8%) | ✅ |
+| high_part01 | 1.07M | 10.8% | 89.2% | 57K AoPS hard | ✅ AoPS only |
+| high_part02 | 1.10M | 0% | **100%** | — | ❌ Skip |
+| medium | 2.50M | 29.6% | 70.4% | — | ❌ Lower quality trajectories |
+
+**Note on "medium" split**: Despite having 739K AoPS problems, the `medium` split contains medium-depth reasoning trajectories for those same problems. Since competition inference runs at `ReasoningEffort.HIGH`, training on medium-depth trajectories would teach the model to produce weaker reasoning chains. Always prefer high-depth trajectories.
+
+---
+
+## Curriculum Training
+
+```python
+import pandas as pd, json
+df = pd.read_parquet("data/nemotron-sft-v3/data.parquet")
+df["messages"] = df["messages"].apply(json.loads)
+
+stage1 = df[df["accuracy"] == 0.125]  # Hardest — model almost never solves
+stage2 = df[df["accuracy"] == 0.25]   # Hard
+stage3 = df[df["accuracy"] == 0.375]  # Moderate — model sometimes solves
 ```
-nvidia/Nemotron-Math-v2 (7M+ trajectories)
-  → Filter: accuracy < 0.5 (hard problems only)
-  → Filter: integer answers only (AIMO format: 0-999)
-  → Filter: with-tool trajectories (Python code execution)
-  → Compress: multi-turn → 2-turn format
-  → Deduplicate: shortest correct trajectory per problem
-  → Fine-tune via SFT / DPO / GRPO
-```
 
-### Why These Filters?
+Train stage1 → stage2 → stage3 with decreasing learning rate. This forces the model to internalize the hardest patterns first.
 
-| Filter | Rationale |
-|--------|-----------|
-| **acc < 0.5** | Problems the model already solves consistently (acc ≥ 0.5) don't benefit from more training — focus compute on the hard tail |
-| **Integer answers** | AIMO competition requires integer answers (0–999). Training on LaTeX/symbolic answers wastes capacity |
-| **With-tool only** | Competition format uses Python code execution. Tool-use trajectories match inference conditions |
-| **Shortest trajectory** | More concise reasoning = less noise, faster inference, better signal |
-
-## Methods
-
-We explore three fine-tuning approaches, all targeting the same goal: increasing pass@1 on hard problems.
-
-### 1. SFT (Supervised Fine-Tuning)
-Train the model to reproduce the correct trajectory for each hard problem. Uses curriculum learning — start with the hardest problems (acc=0.125), then progressively easier ones (0.25, 0.375) with decreasing learning rate.
-
-### 2. DPO (Direct Preference Optimization)
-Generate multiple solutions per problem, use a Gemini judge to score quality, then train the model to prefer higher-quality trajectories. 3-round iterative process with increasing KL penalty to prevent drift.
-
-### 3. GRPO (Group Relative Policy Optimization)
-Reinforcement learning approach — reward correct answers, penalize incorrect ones. Groups multiple samples per problem and optimizes relative to the group's performance.
+---
 
 ## Infrastructure
 
 | Resource | Spec | Purpose |
 |----------|------|---------|
-| **AWS 8×H100** | 640GB total VRAM | Full fine-tuning (DeepSpeed ZeRO-3, multi-GPU) |
-| **GPU Droplet H200** | 141GB VRAM | Single-GPU QLoRA experiments, evaluation |
-| **Kaggle** | Competition notebooks | Inference & submission |
+| **AWS 8×H100** | 640GB VRAM | Full fine-tuning (DeepSpeed ZeRO-3) |
+| **GPU Droplet H200** | 141GB VRAM | Single-GPU QLoRA experiments |
+| **Kaggle** | P100/T4 | Competition inference & submission |
 
 ### Training Config (8×H100)
-- **DeepSpeed ZeRO Stage 3** with offloading
-- **Accelerate** for multi-GPU orchestration
-- **bf16** precision
-- **Gradient checkpointing** enabled
+- DeepSpeed ZeRO Stage 3 with CPU offloading
+- Accelerate multi-GPU orchestration
+- bf16 precision, gradient checkpointing
 
-### Training Config (H200 QLoRA)
-- **4-bit QLoRA** (BitsAndBytes NF4)
-- **LoRA rank 32**, targeting all attention + MLP layers
-- **`merged_4bit_forced`** merge (required for MoE models)
+---
 
 ## Repository Structure
 
 ```
 ├── training/
-│   ├── sft/                    # SFT scripts (v1 → v6, single-GPU + multi-GPU)
-│   ├── dpo/                    # DPO scripts (v1 → v3, iterative with Gemini judge)
-│   ├── data/                   # Dataset preparation (v1 → v3)
-│   └── eval/                   # Evaluation (pass@1)
-├── eda/                        # Exploratory data analysis scripts
-├── scripts/                    # Shell scripts, configs (accelerate, DeepSpeed)
-├── eval/                       # Competition evaluation data
-├── input/                      # Competition input data
-├── old/                        # Archived early-stage experiments
-└── TRAINING_STRATEGIES.md      # Detailed documentation of all approaches
+│   ├── sft/                    # SFT scripts
+│   ├── dpo/                    # DPO scripts (iterative with Gemini judge)
+│   ├── data/
+│   │   ├── prepare_dataset_v3.py   # ← Dataset builder (this creates the dataset)
+│   │   └── prepare_dataset_v2.py   # Legacy
+│   └── eval/
+├── eda/
+│   ├── eda_nemotron_raw.py     # Raw HuggingFace EDA (run first to explore data)
+│   └── eda_check.py            # Kaggle dataset EDA
+├── scripts/                    # accelerate_config.yaml, DeepSpeed config
+├── data/                       # Local dataset outputs (gitignored — lives on Kaggle)
+└── README.md
 ```
 
-## Key Scripts
-
-| Script | Description |
-|--------|-------------|
-| `training/data/prepare_dataset_v3.py` | Build corrected SFT dataset from HuggingFace |
-| `training/sft/train_sft_120b_v6.py` | Curriculum SFT (3-stage, H200) |
-| `training/sft/train_full_8xh100.py` | Full SFT on 8×H100 |
-| `training/dpo/train_dpo_v3.py` | 3-round iterative DPO with Gemini judge |
-| `eda/eda_nemotron_raw.py` | Raw EDA on Nemotron-Math-v2 from HuggingFace |
-| `eda/eda_check.py` | EDA on Kaggle datasets |
-
-## Datasets
-
-| Dataset | Size | Description |
-|---------|------|-------------|
-| [nemotron-math-v2-sft-hard-tools](https://www.kaggle.com/datasets/ritwikakancharla/nemotron-math-v2-sft-hard-tools) | 147K | v2: hard problems, with tools (needs rebuild) |
-| [nemotron-math-v2-sft-high-medium-tools](https://www.kaggle.com/datasets/ritwikakancharla/nemotron-math-v2-sft-high-medium-tools) | 147K | v2: same data, tagged with depth (needs rebuild) |
-| nemotron-math-v2-sft-v3 *(coming)* | TBD | v3: corrected depth, integer-only answers |
+---
 
 ## Getting Started
 
 ```bash
-# Clone
 git clone git@github.com:ritwikareddykancharla/aimo-math-reasoner.git
 cd aimo-math-reasoner
-
-# Set up credentials
 cp .env.example .env  # Add HF_TOKEN, KAGGLE_API_TOKEN, KAGGLE_USERNAME
 
-# Run EDA on raw HuggingFace data
-python3 eda/eda_nemotron_raw.py --split high_part00 --max-rows 5000
+# 1. Explore raw data
+python3.12 eda/eda_nemotron_raw.py --split high_part00 --max-rows 5000
 
-# Build corrected dataset
-python3 training/data/prepare_dataset_v3.py --splits high_part00 --no-upload
+# 2. Build dataset (saves to ./data/ + uploads to Kaggle)
+python3.12 training/data/prepare_dataset_v3.py
 
-# Train (8×H100)
+# 3. Train (8×H100)
 accelerate launch --config_file scripts/accelerate_config.yaml \
     training/sft/train_full_8xh100.py
 ```
 
+---
+
+## Dataset on Kaggle
+
+- [nemotron-math-v2-sft-v3](https://www.kaggle.com/datasets/ritwikakancharla/nemotron-math-v2-sft-v3) — v3 (current, corrected)
+- [nemotron-math-v2-sft-hard-tools](https://www.kaggle.com/datasets/ritwikakancharla/nemotron-math-v2-sft-hard-tools) — v2 (legacy, incorrect filters)
+
+---
+
 ## License
 
-MIT — see [LICENSE](LICENSE)
-
-## Acknowledgments
-
-- **[nvidia/Nemotron-Math-v2](https://huggingface.co/datasets/nvidia/Nemotron-Math-v2)** — Source dataset (CC BY 4.0)
-- **[GPT-OSS-120B](https://huggingface.co/unsloth/gpt-oss-120b-unsloth-bnb-4bit)** — Base model
-- **[Unsloth](https://github.com/unslothai/unsloth)** — Efficient fine-tuning framework
+MIT — Source data: `nvidia/Nemotron-Math-v2` (CC BY 4.0)
