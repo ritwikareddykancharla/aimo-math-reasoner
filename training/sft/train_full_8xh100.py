@@ -176,7 +176,7 @@ MODEL_NAME = "openai/gpt-oss-120b"
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    torch_dtype=torch.bfloat16,
+    dtype=torch.bfloat16,
     attn_implementation="eager",
     token=os.environ.get("HF_TOKEN"),
     trust_remote_code=True,
