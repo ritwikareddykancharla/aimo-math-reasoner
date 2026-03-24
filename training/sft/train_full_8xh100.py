@@ -297,13 +297,9 @@ sft_kwargs = dict(
 
 # Version-safe: add params only if supported
 sig = inspect.signature(SFTConfig.__init__)
-for param, val in [("save_only_model", True), ("max_seq_length", MAX_SEQ_LEN)]:
+for param, val in [("save_only_model", True), ("max_length", MAX_SEQ_LEN)]:
     if param in sig.parameters:
         sft_kwargs[param] = val
-
-trainer_extra = {}
-if "max_seq_length" not in sft_kwargs:
-    trainer_extra["max_seq_length"] = MAX_SEQ_LEN
 
 trainer = SFTTrainer(
     model=model,
@@ -311,7 +307,6 @@ trainer = SFTTrainer(
     args=SFTConfig(**sft_kwargs),
     processing_class=tokenizer,
     callbacks=callbacks,
-    **trainer_extra,
 )
 
 log("\n  Starting training...")
