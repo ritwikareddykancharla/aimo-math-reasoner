@@ -7,8 +7,7 @@ Filters nvidia/Nemotron-Math-v2 for maximum training volume:
   - Splits: high_part00, high_part01, high_part02 (ALL high-reasoning trajectories)
   - Source: ALL (aops + stackflow) — hard math is hard regardless of source
   - Difficulty: reason_high_with_tool accuracy < 0.5
-    (problems the model fails even at max reasoning + tools)
-  - Trajectories: with-tool only (matches competition inference)
+  - Answer: integer in range 0–99999 (matches AIMO competition format)
   - Per problem: shortest trajectory (less noise)
 
 Changes from v3:
@@ -91,6 +90,15 @@ def get_acc_high_with_tool(example):
 def is_hard(example):
     return get_acc_high_with_tool(example) is not None
 
+def is_integer_answer(example):
+    """Check if expected_answer is an integer in 0–99999 (AIMO competition range)."""
+    ans = str(example.get("expected_answer") or "").strip()
+    try:
+        val = int(ans)
+        return 0 <= val <= 99999
+    except (ValueError, TypeError):
+        return False
+
 def compress_messages(messages):
     """Collapse multi-turn tool conversation into 2-turn (user, assistant).
     Handles HuggingFace Arrow-backed arrays, numpy strings, and plain dicts.
@@ -164,10 +172,15 @@ for split_name in args.splits:
     ds = load_dataset(HF_DATASET, token=HF_TOKEN, split=split_name)
     print(f"  Loaded {len(ds):,} rows in {time.time()-t0:.0f}s")
 
-    # Filter: hard (reason_high_with_tool < 0.5)
+    # Filter 1: hard (reason_high_with_tool < 0.5)
     before = len(ds)
     ds = ds.filter(is_hard, num_proc=4)
-    print(f"  Hard filter:  {before:,} → {len(ds):,}")
+    print(f"  Hard filter:    {before:,} → {len(ds):,}")
+
+    # Filter 2: integer answer 0–99999 (AIMO format)
+    before = len(ds)
+    ds = ds.filter(is_integer_answer, num_proc=4)
+    print(f"  Answer filter:  {before:,} → {len(ds):,}")
 
     if len(ds) == 0:
         print("  No rows — skipping")
