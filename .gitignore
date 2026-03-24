@@ -1,3 +1,8 @@
+# Dataset outputs (large files — stored on Kaggle, not git)
+data/
+*.parquet
+*.pkl
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
