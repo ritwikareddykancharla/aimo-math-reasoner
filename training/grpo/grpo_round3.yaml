@@ -1,0 +1,47 @@
+# GRPO Round 1 — AoPS hardest problems (acc=0.125)
+# Launch: python3.12 -m verl.trainer.main_ppo --config-path=training/grpo --config-name=grpo_round3
+
+data:
+  train_files: ./data/grpo_aops_acc0375.parquet
+  train_batch_size: 32
+  max_prompt_length: 512
+  max_response_length: 2048
+
+algorithm:
+  adv_estimator: grpo
+
+actor_rollout_ref:
+  model:
+    path: openai/gpt-oss-120b
+    trust_remote_code: True
+
+  rollout:
+    n: 8                          # 8 responses per problem
+    name: vllm
+    tensor_parallel_size: 8
+    gpu_memory_utilization: 0.4
+    temperature: 1.0
+    top_p: 1.0
+
+  actor:
+    use_kl_loss: True
+    kl_loss_coef: 0.001
+    kl_loss_type: low_var_kl
+    use_remove_padding: True
+    optim:
+      lr: 5e-7
+      min_lr_ratio: 0.1
+
+custom_reward_function:
+  path: ./training/grpo/reward_fn.py
+  name: compute_reward
+
+trainer:
+  n_gpus_per_node: 8
+  project_name: aimo3-grpo
+  experiment_name: gpt-oss-120b-round3
+  logger:
+    - wandb
+    - console
+  save_freq: 50
+  total_epochs: 1
