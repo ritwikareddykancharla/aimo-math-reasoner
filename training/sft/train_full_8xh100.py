@@ -241,35 +241,19 @@ log(f"\n  Done in {train_time/3600:.1f}h | step={final_step} | loss={final_loss}
 # ============================================================
 # SAVE FINAL MODEL
 # ============================================================
-log("\n  Saving final model...")
+log("\n  Saving final model (full bf16)...")
 save_dir = "model-full-ft-final"
 trainer.save_model(save_dir)
 tokenizer.save_pretrained(save_dir)
 log(f"  Saved to {save_dir}")
-
-# ============================================================
-# UPLOAD TO KAGGLE (from main process only)
-# ============================================================
-if IS_MAIN and KAGGLE_USERNAME:
-    log("\n  Uploading to Kaggle...")
-    try:
-        import kagglehub
-        handle = f"{KAGGLE_USERNAME}/gpt-oss-120b-aimo3-sft-v4/transformers/default"
-        t0 = time.time()
-        kagglehub.model_upload(
-            handle, save_dir,
-            version_notes=f"Full FT 8xH100 | step={final_step} | loss={final_loss} | {len(train_data)} samples",
-            license_name="Apache 2.0",
-        )
-        log(f"  ✅ Upload done in {(time.time()-t0)/60:.1f} mins")
-    except Exception as e:
-        log(f"  ⚠️  Upload failed: {e}")
-        log(f"  Model saved locally at {save_dir}")
+log(f"  To quantize + upload to Kaggle, run:")
+log(f"    python3.12 training/sft/quantize_and_upload.py --model-dir {save_dir}")
 
 log("\n" + "=" * 60)
 log("  COMPLETE")
 log(f"  Time: {train_time/3600:.1f}h")
 log(f"  Loss: {final_loss}")
+log(f"  Model: {save_dir}/")
 log("=" * 60)
 
 if WANDB_KEY:
