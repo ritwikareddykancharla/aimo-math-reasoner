@@ -11,19 +11,20 @@ Model:
   openai/gpt-oss-120b requires custom MXFP4 kernels not available here.
 
 Strategy:
-  - vLLM rollout  → bf16, gpu_memory_utilization=0.1 (colocated; expands after FSDP sleeps)
+  - vLLM rollout  → bf16, gpu_memory_utilization=0.1, max_model_len=4096
+                    (max_prompt=512 + max_response=2048 = 2560 tokens needed;
+                     131072 default forces 32× more KV cache profiling → OOM)
   - FSDP actor    → bf16 (clean gradients, GPU resident)
-  - FSDP ref      → bf16, param_offload=true (forward-only; CPU offload frees ~8GB/GPU at init)
+  - FSDP ref      → bf16, param_offload=true (forward-only; CPU offload frees GPU at init)
   - enforce_eager → disables CUDA graph capture (required for colocated FSDP+vLLM)
 
-Memory budget per GPU (80GB) — peak at actor FSDP init:
-  vLLM reserved:      ~8GB   (0.1 × 80GB)
-  Ref model (CPU):    ~0GB   (param_offload=true; params on CPU, only activations on GPU)
-  Actor weights:      ~15GB  (116B bf16 ÷ 8 GPUs, unsharded peak during init)
-  Actor sharded:      ~8GB   (after shard())
-  FSDP optimizer:     ~16GB  (AdamW states, 2× sharded weights)
-  Activations:        ~10GB
-  Total peak:         ~57GB  ✅ ~22GB headroom
+Memory budget per GPU (80GB) at vLLM KV profiling:
+  FSDP actor sharded:  ~15GB  (116B bf16 ÷ 8 GPUs)
+  FSDP optimizer:      ~16GB  (AdamW, 2× sharded weights)
+  vLLM KV cache:       ~8GB   (0.1 × 80GB, with max_model_len=4096 not 131072)
+  Ref (CPU offloaded): ~0GB   on GPU
+  Activations buffer:  ~10GB
+  Total:               ~49GB  ✅ ~30GB headroom
 """
 
 import subprocess
@@ -91,15 +92,17 @@ def main():
         "actor_rollout_ref.model.trust_remote_code=true",
 
         # ── Rollout (vLLM) — bf16, colocated with FSDP ───────────
-        # gpu_memory_utilization=0.1 → ~8GB claimed at init.
-        # vLLM expands into FSDP-freed memory during rollout phase.
-        # enforce_eager=true → no CUDA graph capture (segfaults in colocated setup).
-        # max_num_seqs/max_num_batched_tokens → small KV footprint at profiling.
+        # max_model_len=4096: prompt=512 + response=2048 = 2560 needed.
+        # Default of 131072 forces vLLM to profile/reserve KV blocks for
+        # sequences 64× longer than we use → OOM during _initialize_kv_caches.
+        # enforce_eager=true: no CUDA graph capture (segfaults in colocated setup).
+        # gpu_memory_utilization=0.1: small reservation at init; expands after FSDP sleeps.
         "actor_rollout_ref.rollout.name=vllm",
         "actor_rollout_ref.rollout.n=8",
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
         "actor_rollout_ref.rollout.gpu_memory_utilization=0.1",
         "actor_rollout_ref.rollout.enforce_eager=true",
+        "actor_rollout_ref.rollout.max_model_len=4096",
         "actor_rollout_ref.rollout.max_num_seqs=256",
         "actor_rollout_ref.rollout.temperature=1.0",
         "actor_rollout_ref.rollout.top_p=1.0",
@@ -120,11 +123,8 @@ def main():
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
         # ── Reference model (FSDP) — bf16, CPU offload ───────────
-        # param_offload=true: ref params live on CPU; only fetched to GPU
-        # layer-by-layer during forward pass. Frees ~8GB/GPU at init time,
-        # which is exactly what FSDP needs to clone() actor shards.
-        # Ref is forward-only (no optimizer), so CPU offload overhead is
-        # acceptable — just one extra PCIe transfer per layer per step.
+        # param_offload=true: ref params live on CPU; streamed to GPU
+        # one layer at a time during forward pass. No optimizer states.
         "actor_rollout_ref.ref.fsdp_config.param_offload=true",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
