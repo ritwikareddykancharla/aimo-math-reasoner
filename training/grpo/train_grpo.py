@@ -11,18 +11,19 @@ Model:
   openai/gpt-oss-120b requires custom MXFP4 kernels not available here.
 
 Strategy:
-  - vLLM rollout  → bf16, gpu_memory_utilization=0.1 (colocated: borrows from FSDP sleep-freed memory)
-  - FSDP training → bf16 (clean gradients)
-  - enforce_eager=true → disables CUDA graph capture (required for colocated FSDP+vLLM, prevents segfaults)
+  - vLLM rollout  → bf16, gpu_memory_utilization=0.1 (colocated; expands after FSDP sleeps)
+  - FSDP actor    → bf16 (clean gradients, GPU resident)
+  - FSDP ref      → bf16, param_offload=true (forward-only; CPU offload frees ~8GB/GPU at init)
+  - enforce_eager → disables CUDA graph capture (required for colocated FSDP+vLLM)
 
-Memory budget per GPU (80GB):
-  vLLM reserved:   ~8GB   (0.1 × 80GB)
-  FSDP weights:    ~10GB  (65GB ÷ 8 GPUs, sharded)
-  FSDP gradients:  ~10GB
-  FSDP optimizer:  ~20GB  (AdamW states)
-  Activations:     ~10GB
-  KV cache:        ~10GB  (freed from FSDP sleep mode)
-  Total:           ~68GB  ✅ ~12GB headroom
+Memory budget per GPU (80GB) — peak at actor FSDP init:
+  vLLM reserved:      ~8GB   (0.1 × 80GB)
+  Ref model (CPU):    ~0GB   (param_offload=true; params on CPU, only activations on GPU)
+  Actor weights:      ~15GB  (116B bf16 ÷ 8 GPUs, unsharded peak during init)
+  Actor sharded:      ~8GB   (after shard())
+  FSDP optimizer:     ~16GB  (AdamW states, 2× sharded weights)
+  Activations:        ~10GB
+  Total peak:         ~57GB  ✅ ~22GB headroom
 """
 
 import subprocess
@@ -90,15 +91,10 @@ def main():
         "actor_rollout_ref.model.trust_remote_code=true",
 
         # ── Rollout (vLLM) — bf16, colocated with FSDP ───────────
-        # gpu_memory_utilization=0.1 → vLLM claims ~8GB at init time.
-        # In sleep mode, FSDP frees weights and vLLM expands into that
-        # space for KV cache. Keep this low to avoid OOM at init.
-        #
-        # enforce_eager=true → disables CUDA graph capture
-        # (cudagraph_mode=FULL_AND_PIECEWISE segfaults in colocated setup)
-        #
-        # max_num_seqs=256, max_num_batched_tokens=4096 → smaller KV
-        # cache footprint at profiling time, safe for batch_size=32 × n=8
+        # gpu_memory_utilization=0.1 → ~8GB claimed at init.
+        # vLLM expands into FSDP-freed memory during rollout phase.
+        # enforce_eager=true → no CUDA graph capture (segfaults in colocated setup).
+        # max_num_seqs/max_num_batched_tokens → small KV footprint at profiling.
         "actor_rollout_ref.rollout.name=vllm",
         "actor_rollout_ref.rollout.n=8",
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
@@ -110,9 +106,8 @@ def main():
         "actor_rollout_ref.rollout.max_num_batched_tokens=4096",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=2",
 
-        # ── Actor (FSDP) — bf16 training ─────────────────────────
-        # no param_offload — causes conflicts with cumem_allocator
-        # model-only checkpoint saves (~65GB not ~700GB)
+        # ── Actor (FSDP) — bf16 training, GPU resident ────────────
+        # model-only checkpoint saves (~15GB not ~700GB)
         "actor_rollout_ref.actor.ppo_mini_batch_size=32",
         "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2",
         "actor_rollout_ref.actor.use_kl_loss=true",
@@ -124,10 +119,16 @@ def main():
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
-        # ── Reference model (FSDP) — bf16, forward only ──────────
-        "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=2",
+        # ── Reference model (FSDP) — bf16, CPU offload ───────────
+        # param_offload=true: ref params live on CPU; only fetched to GPU
+        # layer-by-layer during forward pass. Frees ~8GB/GPU at init time,
+        # which is exactly what FSDP needs to clone() actor shards.
+        # Ref is forward-only (no optimizer), so CPU offload overhead is
+        # acceptable — just one extra PCIe transfer per layer per step.
+        "actor_rollout_ref.ref.fsdp_config.param_offload=true",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
+        "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=2",
 
         # ── Algorithm ────────────────────────────────────────────
         "algorithm.adv_estimator=grpo",
@@ -158,7 +159,9 @@ def main():
         "trainer.max_actor_ckpt_to_keep=3",
     ]
 
-    # Clean env — no PYTORCH_ALLOC_CONF, conflicts with vLLM cumem_allocator
+    # Clean env:
+    # - Strip PYTORCH_CUDA_ALLOC_CONF: conflicts with vLLM cumem_allocator
+    # - Strip PYTORCH_ALLOC_CONF: same reason
     env = os.environ.copy()
     env.pop("PYTORCH_CUDA_ALLOC_CONF", None)
     env.pop("PYTORCH_ALLOC_CONF", None)
