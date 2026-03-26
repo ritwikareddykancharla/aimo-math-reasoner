@@ -218,7 +218,7 @@ Each parquet includes `gold_solution` for partial credit reward scoring.
 
 ## Training
 
-### Phase 1 — SFT Full Fine-Tuning (completed)
+### Phase 1 — SFT Full Fine-Tuning (compute constrained)
 
 | Setting | Value |
 |---------|-------|
