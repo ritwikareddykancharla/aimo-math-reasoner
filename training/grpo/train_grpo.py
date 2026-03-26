@@ -11,16 +11,18 @@ Model:
   openai/gpt-oss-120b requires custom MXFP4 kernels not available here.
 
 Strategy:
-  - vLLM rollout  → bf16, gpu_memory_utilization=0.2 (leaves room for FSDP wake_up)
+  - vLLM rollout  → bf16, gpu_memory_utilization=0.1 (colocated: borrows from FSDP sleep-freed memory)
   - FSDP training → bf16 (clean gradients)
+  - enforce_eager=true → disables CUDA graph capture (required for colocated FSDP+vLLM, prevents segfaults)
 
 Memory budget per GPU (80GB):
-  vLLM reserved:   ~16GB  (0.2 × 80GB)
-  FSDP weights:    ~10GB  (65GB ÷ 8 GPUs)
+  vLLM reserved:   ~8GB   (0.1 × 80GB)
+  FSDP weights:    ~10GB  (65GB ÷ 8 GPUs, sharded)
   FSDP gradients:  ~10GB
   FSDP optimizer:  ~20GB  (AdamW states)
   Activations:     ~10GB
-  Total:           ~66GB  ✅ ~14GB headroom
+  KV cache:        ~10GB  (freed from FSDP sleep mode)
+  Total:           ~68GB  ✅ ~12GB headroom
 """
 
 import subprocess
@@ -87,17 +89,25 @@ def main():
         f"actor_rollout_ref.model.path={r['model']}",
         "actor_rollout_ref.model.trust_remote_code=true",
 
-        # ── Rollout (vLLM) — bf16, low memory reservation ────────
-        # gpu_memory_utilization=0.2 → vLLM reserves ~16GB per GPU
-        # leaves ~64GB for FSDP training pass
-        # prevents OOM when vLLM wakes up after FSDP step
+        # ── Rollout (vLLM) — bf16, colocated with FSDP ───────────
+        # gpu_memory_utilization=0.1 → vLLM claims ~8GB at init time.
+        # In sleep mode, FSDP frees weights and vLLM expands into that
+        # space for KV cache. Keep this low to avoid OOM at init.
+        #
+        # enforce_eager=true → disables CUDA graph capture
+        # (cudagraph_mode=FULL_AND_PIECEWISE segfaults in colocated setup)
+        #
+        # max_num_seqs=256, max_num_batched_tokens=4096 → smaller KV
+        # cache footprint at profiling time, safe for batch_size=32 × n=8
         "actor_rollout_ref.rollout.name=vllm",
         "actor_rollout_ref.rollout.n=8",
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.2",    # lowered from 0.3
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.1",
+        "actor_rollout_ref.rollout.enforce_eager=true",
+        "actor_rollout_ref.rollout.max_num_seqs=256",
         "actor_rollout_ref.rollout.temperature=1.0",
         "actor_rollout_ref.rollout.top_p=1.0",
-        "actor_rollout_ref.rollout.max_num_batched_tokens=8192",
+        "actor_rollout_ref.rollout.max_num_batched_tokens=4096",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=2",
 
         # ── Actor (FSDP) — bf16 training ─────────────────────────
@@ -114,7 +124,7 @@ def main():
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
-        # ── Reference model (FSDP) — bf16, forward only ─────────
+        # ── Reference model (FSDP) — bf16, forward only ──────────
         "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=2",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
