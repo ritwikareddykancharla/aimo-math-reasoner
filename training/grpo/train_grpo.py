@@ -11,20 +11,26 @@ Model:
   openai/gpt-oss-120b requires custom MXFP4 kernels not available here.
 
 Strategy:
-  - vLLM rollout  → bf16, gpu_memory_utilization=0.1, max_model_len=4096
-                    (max_prompt=512 + max_response=2048 = 2560 tokens needed;
-                     131072 default forces 32× more KV cache profiling → OOM)
+  - vLLM rollout  → bf16, TP=1 per GPU (colocated mode: each of 8 GPUs runs
+                    its own vLLM instance; weights synced from FSDP shards)
+                    gpu_memory_utilization=0.45, max_model_len=4096
   - FSDP actor    → bf16 (clean gradients, GPU resident)
-  - FSDP ref      → bf16, param_offload=true (forward-only; CPU offload frees GPU at init)
+  - FSDP ref      → bf16, param_offload=true (forward-only; CPU offload frees GPU)
   - enforce_eager → disables CUDA graph capture (required for colocated FSDP+vLLM)
 
-Memory budget per GPU (80GB) at vLLM KV profiling:
-  FSDP actor sharded:  ~15GB  (116B bf16 ÷ 8 GPUs)
-  FSDP optimizer:      ~16GB  (AdamW, 2× sharded weights)
-  vLLM KV cache:       ~8GB   (0.1 × 80GB, with max_model_len=4096 not 131072)
+MoE memory per GPU (80GB H100/A100):
+  This is a 120B MoE with 128 experts, top-4. Active params ~30B.
+  FSDP shards all 120B params across 8 GPUs = ~15GB/GPU (bf16).
+  vLLM in colocated mode uses dummy loading + weight sync from FSDP.
+  Each GPU's vLLM instance holds the full model shard it received.
+
+Memory budget per GPU (80GB):
+  FSDP actor sharded:  ~15GB  (116B bf16 / 8 GPUs)
+  FSDP optimizer:      ~30GB  (AdamW states for sharded params)
+  vLLM KV cache:       ~8GB   (after FSDP sleeps, vLLM wakes)
   Ref (CPU offloaded): ~0GB   on GPU
   Activations buffer:  ~10GB
-  Total:               ~49GB  ✅ ~30GB headroom
+  Total peak:          ~55GB  (actor train) or ~25GB (rollout phase)
 """
 
 import subprocess
@@ -91,28 +97,42 @@ def main():
         f"actor_rollout_ref.model.path={r['model']}",
         "actor_rollout_ref.model.trust_remote_code=true",
 
-        # ── Rollout (vLLM) — bf16, colocated with FSDP ───────────
-        # max_model_len=4096: prompt=512 + response=2048 = 2560 needed.
-        # Default of 131072 forces vLLM to profile/reserve KV blocks for
-        # sequences 64× longer than we use → OOM during _initialize_kv_caches.
-        # enforce_eager=true: no CUDA graph capture (segfaults in colocated setup).
-        # gpu_memory_utilization=0.1: small reservation at init; expands after FSDP sleeps.
+        # ── Rollout (vLLM) — colocated with FSDP ─────────────────
+        #
+        # KEY: tensor_model_parallel_size=1
+        #   In verl's colocated mode, vLLM runs inside Ray actors that
+        #   each own 1 GPU. verl launches one vLLM instance per GPU.
+        #   The vLLM engine uses load_format=dummy (no disk load) and
+        #   receives weights from the FSDP actor via sleep/wake sync.
+        #   TP>1 requires vLLM to coordinate across multiple processes
+        #   via TCPStore, but the uniproc executor (forced in Ray actors)
+        #   only spawns 1 worker → 1/8 clients join → 601s timeout.
+        #
+        # n=8: number of rollout responses per prompt (GRPO group size)
+        #
+        # gpu_memory_utilization=0.45: fraction of FREE GPU memory for
+        #   vLLM KV cache. During rollout phase, FSDP actor is asleep
+        #   (weights offloaded), freeing ~30-40GB. 0.45 of remaining
+        #   free memory gives adequate KV cache for max_model_len=4096.
+        #
+        # max_num_seqs=64: max concurrent sequences in vLLM scheduler.
+        #   Reduced from 256 to limit peak memory per GPU.
+        #
         "actor_rollout_ref.rollout.name=vllm",
         "actor_rollout_ref.rollout.n=8",
-        "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.1",
+        "actor_rollout_ref.rollout.tensor_model_parallel_size=1",
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.45",
         "actor_rollout_ref.rollout.enforce_eager=true",
         "actor_rollout_ref.rollout.max_model_len=4096",
-        "actor_rollout_ref.rollout.max_num_seqs=256",
+        "actor_rollout_ref.rollout.max_num_seqs=64",
         "actor_rollout_ref.rollout.temperature=1.0",
         "actor_rollout_ref.rollout.top_p=1.0",
         "actor_rollout_ref.rollout.max_num_batched_tokens=4096",
-        "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=2",
+        "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
 
         # ── Actor (FSDP) — bf16 training, GPU resident ────────────
-        # model-only checkpoint saves (~15GB not ~700GB)
         "actor_rollout_ref.actor.ppo_mini_batch_size=32",
-        "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=2",
+        "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=1",
         "actor_rollout_ref.actor.use_kl_loss=true",
         "actor_rollout_ref.actor.kl_loss_coef=0.001",
         "actor_rollout_ref.actor.kl_loss_type=low_var_kl",
@@ -123,12 +143,10 @@ def main():
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
         # ── Reference model (FSDP) — bf16, CPU offload ───────────
-        # param_offload=true: ref params live on CPU; streamed to GPU
-        # one layer at a time during forward pass. No optimizer states.
         "actor_rollout_ref.ref.fsdp_config.param_offload=true",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
-        "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=2",
+        "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1",
 
         # ── Algorithm ────────────────────────────────────────────
         "algorithm.adv_estimator=grpo",
