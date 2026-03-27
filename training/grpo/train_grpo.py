@@ -137,6 +137,7 @@ def main():
         "actor_rollout_ref.actor.use_remove_padding=true",
         "actor_rollout_ref.actor.optim.lr=5e-7",
         "actor_rollout_ref.actor.fsdp_config.param_offload=true",
+        "actor_rollout_ref.actor.fsdp_config.use_orig_params=true",
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
