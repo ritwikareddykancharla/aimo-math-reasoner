@@ -164,7 +164,6 @@ def main():
         "--config-name=ppo_trainer",
 
         # ── Ray cluster ──────────────────────────────────────────
-        f"ray_init.address={NODE1_IP}:{RAY_PORT}",
 
         # ── Model ────────────────────────────────────────────────
         f"actor_rollout_ref.model.path={r['model']}",
@@ -174,7 +173,7 @@ def main():
         "actor_rollout_ref.rollout.name=vllm",
         "actor_rollout_ref.rollout.n=16",                          # was 8, now 16 (full node)
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",  # full node for vLLM
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.85",   # dedicated node, go high
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.2",   # dedicated node, go high
         "actor_rollout_ref.rollout.enforce_eager=true",
         "actor_rollout_ref.rollout.max_model_len=4096",
         "actor_rollout_ref.rollout.max_num_seqs=32",
@@ -193,14 +192,14 @@ def main():
         "actor_rollout_ref.actor.kl_loss_type=low_var_kl",
         "actor_rollout_ref.actor.use_remove_padding=true",
         "actor_rollout_ref.actor.optim.lr=5e-7",
-        "actor_rollout_ref.actor.fsdp_config.param_offload=false", # dedicated node, no offload
+        "actor_rollout_ref.actor.fsdp_config.param_offload=true", # dedicated node, no offload
         "actor_rollout_ref.actor.fsdp_config.use_orig_params=true",
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
         # ── Reference (FSDP) — pinned to Node 2 ─────────────────
-        "actor_rollout_ref.ref.fsdp_config.param_offload=false",   # dedicated node
+        "actor_rollout_ref.ref.fsdp_config.param_offload=true",   # dedicated node
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
         "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1",
