@@ -217,7 +217,7 @@ def main():
         # ── Reward ───────────────────────────────────────────────
         "reward.reward_model.enable=false",
         f"reward.custom_reward_function.path={REWARD_FN}",
-        "reward.custom_reward_function.name=compute_reward",
+        "reward.custom_reward_function.name=compute_score",
 
         # ── Trainer ──────────────────────────────────────────────
         "trainer.nnodes=2",                                        # was 1
