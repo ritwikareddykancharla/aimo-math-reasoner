@@ -91,9 +91,13 @@ def verify_ray_cluster():
 
     ray.shutdown()
 
-
+# 1. In run_patch(), skip if already patched
 def run_patch(revert=False):
-    """Apply or revert the verl freeze patch."""
+    if not revert:
+        with open(FSDP_WORKERS := "/home/ssm-user/.local/lib/python3.12/site-packages/verl/workers/fsdp_workers.py") as f:
+            if "AIMO3" in f.read():
+                print("Patch already applied, skipping.")
+                return
     cmd = ["python3.12", PATCH_SCRIPT]
     if revert:
         cmd.append("--revert")
