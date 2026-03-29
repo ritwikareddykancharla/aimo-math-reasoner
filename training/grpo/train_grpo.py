@@ -1,15 +1,18 @@
 """
 AIMO3 GRPO Training — 2-Node Setup
-  Node 1 (172.31.104.85): Rollout worker (vLLM, 8x H100)
-  Node 2 (172.31.101.45): Actor/Ref trainer (FSDP, 8x H100)
+  Node 1 (172.31.104.85) + Node 2 (172.31.101.45): 16x H100 global pool
+  - FSDP actor/ref: sharded across ALL 16 GPUs
+  - vLLM rollout:   tensor parallel across ALL 16 GPUs
 
 Model: unsloth/gpt-oss-120b (120B MoE, 128 experts top-4, MXFP4)
-  - ~115B expert params: FROZEN (MXFP4, no gradients, no optimizer states)
-  - ~5B dense params:    TRAINED (attention, norms, router, embed, LM head)
+  - ~115B expert params: FROZEN (no gradients, no optimizer states)
+  - ~2.13B dense params: TRAINED (attention, norms, router, embed, LM head)
 
-Memory per node:
-  Rollout node:  vLLM full model ~65GB, KV cache ~10GB   ✓
-  Trainer node:  FSDP shards ~7.5GB, AdamW ~2.5GB        ✓
+Memory per GPU (16x H100 80GB):
+  FSDP shard:      ~4GB   (65GB / 16 GPUs, offloaded to CPU between steps)
+  vLLM:            ~24GB  (80GB x 0.3)
+  KV cache:        ~50GB  (remainder)
+  Peak:            ~78GB  ✓
 
 Usage:
   python3.12 training/grpo/train_grpo.py --round 1
@@ -28,10 +31,11 @@ CKPT_ROOT    = os.path.join(PROJECT_ROOT, "checkpoints")
 REWARD_FN    = os.path.join(PROJECT_ROOT, "training", "grpo", "reward_fn.py")
 VERL_CONFIG  = "/home/ssm-user/.local/lib/python3.12/site-packages/verl/trainer/config"
 PATCH_SCRIPT = os.path.join(PROJECT_ROOT, "training", "grpo", "apply_freeze_patch.py")
+FSDP_WORKERS = "/home/ssm-user/.local/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
 
 # ── Node IPs ────────────────────────────────────────────────────────────────
-NODE1_IP = os.getenv("NODE1_IP", "172.31.104.85")  # rollout node
-NODE2_IP = os.getenv("NODE2_IP", "172.31.101.45")  # trainer node
+NODE1_IP = os.getenv("NODE1_IP", "172.31.104.85")
+NODE2_IP = os.getenv("NODE2_IP", "172.31.101.45")
 RAY_PORT = os.getenv("RAY_HEAD_PORT", "6379")
 
 ROUNDS = {
@@ -78,23 +82,14 @@ def verify_ray_cluster():
     if total_gpus < 16:
         raise RuntimeError(f"Expected 16 GPUs but found {total_gpus}.")
 
-    # Identify which node is which
-    node_ips = [n["NodeManagerAddress"] for n in nodes]
-    if NODE1_IP not in node_ips:
-        raise RuntimeError(f"Rollout node {NODE1_IP} not found in cluster: {node_ips}")
-    if NODE2_IP not in node_ips:
-        raise RuntimeError(f"Trainer node {NODE2_IP} not found in cluster: {node_ips}")
-
-    print(f"\n  Rollout node: {NODE1_IP} (vLLM)")
-    print(f"  Trainer node: {NODE2_IP} (FSDP)")
-    print("  Ray cluster OK ✓\n")
-
+    print(f"\n  Ray cluster OK ✓ — {int(total_gpus)} GPUs across {len(nodes)} nodes\n")
     ray.shutdown()
 
-# 1. In run_patch(), skip if already patched
+
 def run_patch(revert=False):
+    """Apply or revert the verl freeze patch."""
     if not revert:
-        with open(FSDP_WORKERS := "/home/ssm-user/.local/lib/python3.12/site-packages/verl/workers/fsdp_workers.py") as f:
+        with open(FSDP_WORKERS) as f:
             if "AIMO3" in f.read():
                 print("Patch already applied, skipping.")
                 return
@@ -103,7 +98,7 @@ def run_patch(revert=False):
         cmd.append("--revert")
     result = subprocess.run(cmd, capture_output=True, text=True)
     print(result.stdout.strip())
-    if result.returncode != 0:
+    if result.returncode != 0 and "already patched" not in result.stdout:
         print(result.stderr.strip())
         sys.exit(1)
 
@@ -139,21 +134,23 @@ def main():
     freeze = not args.no_freeze
 
     print(f"\n{'='*60}")
-    print(f"  GRPO Round {args.round} — 2-Node Setup")
-    print(f"  Rollout node: {NODE1_IP} (vLLM, 8x H100)")
-    print(f"  Trainer node: {NODE2_IP} (FSDP, 8x H100)")
-    print(f"  Data:    {r['data']}")
-    print(f"  Model:   {r['model']}")
-    print(f"  Exp:     {r['experiment']}")
-    print(f"  Ckpt:    {r['ckpt_dir']}")
-    print(f"  Mode:    {'Dense-only (MoE experts frozen)' if freeze else 'Full fine-tune'}")
+    print(f"  GRPO Round {args.round} — 2-Node 16x H100 Setup")
+    print(f"  Node 1: {NODE1_IP} (8x H100)")
+    print(f"  Node 2: {NODE2_IP} (8x H100)")
+    print(f"  FSDP:   sharded across 16 GPUs")
+    print(f"  vLLM:   tensor parallel across 16 GPUs")
+    print(f"  Data:   {r['data']}")
+    print(f"  Model:  {r['model']}")
+    print(f"  Exp:    {r['experiment']}")
+    print(f"  Ckpt:   {r['ckpt_dir']}")
+    print(f"  Mode:   {'Dense-only (MoE experts frozen)' if freeze else 'Full fine-tune'}")
     print(f"{'='*60}\n")
 
     # Verify Ray cluster
     if not args.skip_ray_check:
         verify_ray_cluster()
 
-    # Apply or ensure patch
+    # Apply freeze patch
     if freeze:
         run_patch()
     print()
@@ -163,17 +160,15 @@ def main():
         f"--config-path={VERL_CONFIG}",
         "--config-name=ppo_trainer",
 
-        # ── Ray cluster ──────────────────────────────────────────
-
         # ── Model ────────────────────────────────────────────────
         f"actor_rollout_ref.model.path={r['model']}",
         "actor_rollout_ref.model.trust_remote_code=true",
 
-        # ── Rollout (vLLM) — pinned to Node 1 ───────────────────
+        # ── Rollout (vLLM) — 16 GPU tensor parallel ──────────────
         "actor_rollout_ref.rollout.name=vllm",
-        "actor_rollout_ref.rollout.n=16",                          # was 8, now 16 (full node)
-        "actor_rollout_ref.rollout.tensor_model_parallel_size=8",  # full node for vLLM
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.2",   # dedicated node, go high
+        "actor_rollout_ref.rollout.n=16",
+        "actor_rollout_ref.rollout.tensor_model_parallel_size=16",  # all 16 GPUs
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.3",     # 30% of 80GB = 24GB/GPU
         "actor_rollout_ref.rollout.enforce_eager=true",
         "actor_rollout_ref.rollout.max_model_len=4096",
         "actor_rollout_ref.rollout.max_num_seqs=32",
@@ -182,24 +177,22 @@ def main():
         "actor_rollout_ref.rollout.max_num_batched_tokens=4096",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
 
-        # ── Node placement ───────────────────────────────────────
-
-        # ── Actor (FSDP) — pinned to Node 2 ─────────────────────
-        "actor_rollout_ref.actor.ppo_mini_batch_size=64",          # was 32, doubled
+        # ── Actor (FSDP) — sharded across 16 GPUs ───────────────
+        "actor_rollout_ref.actor.ppo_mini_batch_size=64",
         "actor_rollout_ref.actor.ppo_micro_batch_size_per_gpu=1",
         "actor_rollout_ref.actor.use_kl_loss=true",
         "actor_rollout_ref.actor.kl_loss_coef=0.001",
         "actor_rollout_ref.actor.kl_loss_type=low_var_kl",
         "actor_rollout_ref.actor.use_remove_padding=true",
         "actor_rollout_ref.actor.optim.lr=5e-7",
-        "actor_rollout_ref.actor.fsdp_config.param_offload=true", # dedicated node, no offload
+        "actor_rollout_ref.actor.fsdp_config.param_offload=true",  # CPU offload between steps
         "actor_rollout_ref.actor.fsdp_config.use_orig_params=true",
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
-        # ── Reference (FSDP) — pinned to Node 2 ─────────────────
-        "actor_rollout_ref.ref.fsdp_config.param_offload=true",   # dedicated node
+        # ── Reference (FSDP) — sharded across 16 GPUs ───────────
+        "actor_rollout_ref.ref.fsdp_config.param_offload=true",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
         "actor_rollout_ref.ref.log_prob_micro_batch_size_per_gpu=1",
@@ -210,7 +203,7 @@ def main():
         # ── Data ─────────────────────────────────────────────────
         f"data.train_files={r['data']}",
         f"data.val_files={r['data']}",
-        "data.train_batch_size=64",                                # was 32, doubled
+        "data.train_batch_size=64",
         "data.max_prompt_length=512",
         "data.max_response_length=2048",
 
@@ -220,7 +213,7 @@ def main():
         "reward.custom_reward_function.name=compute_score",
 
         # ── Trainer ──────────────────────────────────────────────
-        "trainer.nnodes=2",                                        # was 1
+        "trainer.nnodes=2",
         "trainer.n_gpus_per_node=8",
         "trainer.total_epochs=1",
         "trainer.project_name=aimo3-grpo",
