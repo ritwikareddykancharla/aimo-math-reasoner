@@ -3,9 +3,17 @@ training/grpo/reward_fn.py
 
 GRPO Reward Function for AIMO3
 ==============================
-10-level reward spectrum with:
+veRL calls this as:
+    compute_score(
+        data_source=...,
+        solution_str=...,      # decoded response string
+        ground_truth=...,      # from reward_model["ground_truth"]
+        extra_info={...},      # dict, may contain gold_solution
+    )
+
+10-level reward spectrum:
   - Nested brace answer extraction
-  - Answer normalization + numeric equivalence  
+  - Answer normalization + numeric equivalence
   - Length penalty (anti-memorization)
   - Gold solution step similarity (partial credit)
   - Broken gold solution detection (fallback)
@@ -122,12 +130,10 @@ BROKEN_SIGNALS = [
 def is_valid_gold(gold):
     """
     Returns False if gold solution is a broken/failed trace.
-    Broken gold = noise, not signal. Fall back to simpler reward.
-    
-    Stats from our dataset:
-      acc=0.125: 36% broken (hardest problems timeout more)
-      acc=0.250: 20% broken
-      acc=0.375: 12% broken
+    Stats from dataset:
+      acc=0.125: 34.9% broken
+      acc=0.250: 18.7% broken
+      acc=0.375: 10.8% broken
     """
     if not gold or len(gold) < 50:
         return False
@@ -157,7 +163,7 @@ def extract_numbers(text):
     for num in re.finditer(r'(?<![a-zA-Z])(\d+\.?\d*)(?![a-zA-Z])', text):
         try:
             val = float(num.group(1))
-            if 0 < val <= 9999:      # skip likely non-math numbers
+            if 0 < val <= 9999:
                 numbers.add(round(val, 4))
         except Exception:
             pass
@@ -168,8 +174,6 @@ def extract_numbers(text):
 def compute_step_similarity(response, gold_solution):
     """
     Fraction of gold intermediate steps that appear in response.
-    Final answer is excluded from gold steps (handled by correctness reward).
-    
     Returns (similarity: float, depth: float) both in [0, 1]
     """
     all_gold_numbers = extract_numbers(gold_solution)
@@ -190,7 +194,6 @@ def compute_step_similarity(response, gold_solution):
     overlap = all_gold_numbers & response_numbers
     similarity = len(overlap) / len(all_gold_numbers)
 
-    # Depth: how many reasoning indicators in gold vs response
     gold_depth = max(1, len(re.findall(
         r'(therefore|thus|so |hence|we get|we have|gives|equals|=)',
         gold_solution.lower()
@@ -204,9 +207,19 @@ def compute_step_similarity(response, gold_solution):
 # MAIN REWARD FUNCTION
 # ============================================================
 
-def compute_reward(responses, ground_truths, gold_solutions=None, **kwargs):
+def compute_score(data_source, solution_str, ground_truth, extra_info=None, **kwargs):
     """
-    GRPO reward function for AIMO3 math competition problems.
+    GRPO reward function for AIMO3 — matches veRL's NaiveRewardManager signature.
+
+    Called by veRL as:
+        compute_score(
+            data_source=data_source,
+            solution_str=response_str,
+            ground_truth=ground_truth,   # from reward_model["ground_truth"]
+            extra_info=extra_info,
+        )
+
+    gold_solution is pulled from extra_info if available.
 
     Reward spectrum (10 levels):
     ┌─────────────────────────────────────────────────┬────────┐
@@ -215,106 +228,92 @@ def compute_reward(responses, ground_truths, gold_solutions=None, **kwargs):
     │ Correct + some reasoning (100-300 chars)        │  +0.6  │
     │ Correct + no reasoning (<100 chars, memorized)  │  +0.1  │
     ├─────────────────────────────────────────────────┼────────┤
-    │ Wrong + >70% gold steps (right track, arith err)│  -0.1  │
+    │ Wrong + >70% gold steps (right track)           │  -0.1  │
     │ Wrong + 40-70% gold steps                       │  -0.3  │
     │ Wrong + 10-40% gold steps + work shown          │  -0.5  │
     │ Wrong + work shown, no gold overlap             │  -0.6  │
     │ Wrong + minimal work                            │  -0.75 │
     │ No \\boxed{} or gave up                         │  -1.0  │
     └─────────────────────────────────────────────────┴────────┘
-
-    gold_solutions: optional list of gold solution strings
-        If None or broken → falls back to simpler reward
-        VERL passes this automatically from reward_model dict
     """
+    if extra_info is None:
+        extra_info = {}
 
-    has_gold = (
-        gold_solutions is not None
-        and len(gold_solutions) == len(responses)
-    )
+    # Pull gold_solution from extra_info (passed via reward_model dict)
+    gold_solution = extra_info.get("gold_solution", None)
 
-    rewards = []
+    response     = solution_str
+    gt           = str(ground_truth) if ground_truth is not None else None
+    pred         = extract_boxed(response)
+    response_len = len(response)
 
-    for i, (response, gt) in enumerate(zip(responses, ground_truths)):
+    # ── No \boxed{} ─────────────────────────────────────────
+    if pred is None:
+        return -1.0
 
-        pred         = extract_boxed(response)
-        response_len = len(response)
+    # ── CORRECT ─────────────────────────────────────────────
+    if answers_match(pred, gt):
 
-        # ── No \boxed{} ─────────────────────────────────────────
-        if pred is None:
-            rewards.append(-1.0)
-            continue
+        if response_len < 100:
+            # Too short — likely memorized answer
+            reward = 0.1
 
-        # ── CORRECT ─────────────────────────────────────────────
-        if answers_match(pred, str(gt)):
+        elif response_len < 300:
+            # Some work shown but not full reasoning
+            reward = 0.6
 
-            if response_len < 100:
-                # Too short — likely memorized answer
-                reward = 0.1
+        else:
+            # Full reasoning shown
+            reward = 1.0
 
-            elif response_len < 300:
-                # Some work shown but not full reasoning
-                reward = 0.6
+            # Similarity bonus: did model follow gold path?
+            if gold_solution and is_valid_gold(gold_solution):
+                sim, _ = compute_step_similarity(response, gold_solution)
+                if sim > 0.5:
+                    reward += 0.2 * sim   # up to +0.2 bonus → max 1.2
+
+    # ── WRONG ───────────────────────────────────────────────
+    else:
+        has_reasoning = response_len > 200
+        has_steps = any(
+            kw in response.lower()
+            for kw in [
+                'therefore', 'thus', 'so ', 'we have',
+                'note that', 'since', 'because', '=',
+                'hence', 'gives', 'compute', 'calculate',
+            ]
+        )
+
+        use_sim = gold_solution and is_valid_gold(gold_solution) and has_reasoning
+
+        if use_sim:
+            sim, depth = compute_step_similarity(response, gold_solution)
+
+            if sim >= 0.7:
+                # Right track — hit most intermediate steps
+                # Small arithmetic error at end
+                reward = -0.1
+
+            elif sim >= 0.4:
+                # Partial understanding of correct approach
+                reward = -0.3
+
+            elif sim >= 0.1 and has_steps:
+                # Some overlap, showed reasoning
+                reward = -0.5
 
             else:
-                # Full reasoning shown
-                reward = 1.0
-
-                # Similarity bonus: did model follow gold path?
-                gold = gold_solutions[i] if has_gold else None
-                if gold and is_valid_gold(gold):
-                    sim, _ = compute_step_similarity(response, gold)
-                    if sim > 0.5:
-                        reward += 0.2 * sim   # up to +0.2 bonus
-
-        # ── WRONG ───────────────────────────────────────────────
-        else:
-            has_reasoning = response_len > 200
-            has_steps     = any(
-                kw in response.lower()
-                for kw in [
-                    'therefore', 'thus', 'so ', 'we have',
-                    'note that', 'since', 'because', '=',
-                    'hence', 'gives', 'compute', 'calculate',
-                ]
-            )
-
-            # Get gold similarity if available and valid
-            gold = gold_solutions[i] if has_gold else None
-            use_sim = gold and is_valid_gold(gold) and has_reasoning
-
-            if use_sim:
-                sim, depth = compute_step_similarity(response, gold)
-
-                if sim >= 0.7:
-                    # Right track — hit most intermediate steps
-                    # Small arithmetic error at end
-                    # GRPO should strongly reinforce this path
-                    reward = -0.1
-
-                elif sim >= 0.4:
-                    # Partial understanding of correct approach
-                    reward = -0.3
-
-                elif sim >= 0.1 and has_steps:
-                    # Some overlap, showed reasoning
-                    reward = -0.5
-
-                else:
-                    # Showed work but completely different approach
-                    reward = -0.6
-
-            elif has_reasoning and has_steps:
-                # No valid gold — fallback to work-based reward
+                # Completely different approach
                 reward = -0.6
 
-            elif has_reasoning:
-                reward = -0.75
+        elif has_reasoning and has_steps:
+            reward = -0.6
 
-            else:
-                # Gave up — minimal output
-                reward = -1.0
+        elif has_reasoning:
+            reward = -0.75
 
-        rewards.append(float(reward))
+        else:
+            # Gave up — minimal output
+            reward = -1.0
 
-    return rewards
+    return float(reward)
