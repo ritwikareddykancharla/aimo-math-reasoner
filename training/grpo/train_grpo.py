@@ -180,9 +180,6 @@ def main():
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
 
         # ── Node placement ───────────────────────────────────────
-        f"actor_rollout_ref.rollout.ray_actor_options.resources.node:{NODE1_IP}=0.1",
-        f"actor_rollout_ref.actor.ray_actor_options.resources.node:{NODE2_IP}=0.1",
-        f"actor_rollout_ref.ref.ray_actor_options.resources.node:{NODE2_IP}=0.1",
 
         # ── Actor (FSDP) — pinned to Node 2 ─────────────────────
         "actor_rollout_ref.actor.ppo_mini_batch_size=64",          # was 32, doubled
