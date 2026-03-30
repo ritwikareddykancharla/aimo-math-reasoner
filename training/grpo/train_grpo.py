@@ -222,7 +222,7 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.rollout.n=8",
         f"actor_rollout_ref.rollout.temperature={TEMPERATURE}",
         f"actor_rollout_ref.rollout.top_p={TOP_P}",
-        f"actor_rollout_ref.rollout.min_p={MIN_P}",
+        f"+actor_rollout_ref.rollout.min_p={MIN_P}",
         "actor_rollout_ref.rollout.max_model_len=65536",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
         # Multi-turn tool calling
