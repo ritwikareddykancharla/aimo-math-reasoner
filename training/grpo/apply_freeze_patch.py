@@ -14,7 +14,7 @@ import shutil
 import os
 import sys
 
-FSDP_WORKERS = "/mnt/python/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
+FSDP_WORKERS = "/data/venv/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
 BACKUP = FSDP_WORKERS + ".bak"
 
 
