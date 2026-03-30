@@ -157,8 +157,10 @@ def build_env() -> dict:
         "RDMAV_FORK_SAFE":           "1",
         # NCCL
         "NCCL_SOCKET_IFNAME":        "enp71s0",
-        "NCCL_IB_DISABLE":           "0",
+        "NCCL_IB_DISABLE":           "1",
         "NCCL_TIMEOUT":              "1800",
+        "TORCH_NCCL_BLOCKING_WAIT":  "0",
+        "TORCH_NCCL_ASYNC_ERROR_HANDLING": "1",
         "NCCL_PROTO":                "simple",
         "NCCL_ALGO":                 "ring",
         # SGLang / vLLM
@@ -166,6 +168,12 @@ def build_env() -> dict:
         "VLLM_ATTENTION_BACKEND":    "FLASH_ATTN",
         # verl / hydra verbosity
         "HYDRA_FULL_ERROR":          "1",
+        "TORCH_DIST_INIT_BARRIER_TIMEOUT": "1800",
+        "NCCL_TIMEOUT":              "1800",
+        "TORCH_NCCL_BLOCKING_WAIT":  "0",
+        "TORCH_NCCL_ASYNC_ERROR_HANDLING": "1",
+        "NCCL_DEBUG":                "INFO",
+        "NCCL_DEBUG_FILE":           "/tmp/nccl_worker_%h_%p.log",
         "RAY_LOGGING_LEVEL":         "DEBUG",
     })
     return env
@@ -174,7 +182,7 @@ def build_env() -> dict:
 def build_cmd(r: dict, freeze: bool) -> list:
     """Construct the verl PPO trainer command."""
     return [
-        PYTHON, "-m", "verl.trainer.main_grpo",
+        PYTHON, "-m", "verl.trainer.main_ppo",
         f"--config-path={VERL_CONFIG}",
         "--config-name=ppo_trainer",
 
@@ -337,7 +345,7 @@ def main():
     env = build_env()
 
     print("Launching verl PPO trainer …")
-    print(f"  {PYTHON} -m verl.trainer.main_grpo  [round={args.round}]\n")
+    print(f"  {PYTHON} -m verl.trainer.main_ppo  [round={args.round}]\n")
 
     subprocess.run(cmd, check=True, env=env)
 
