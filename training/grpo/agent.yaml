@@ -1,0 +1,17 @@
+agent:
+  tools:
+    - type: function
+      function:
+        name: python
+        description: >
+          Use this tool to execute Python code in a stateful environment.
+          Write assert statements to verify base cases before computing the final result.
+          Use print() to output results.
+        parameters:
+          type: object
+          properties:
+            code:
+              type: string
+              description: The Python code to execute.
+          required:
+            - code
