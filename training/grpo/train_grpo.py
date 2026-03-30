@@ -174,7 +174,7 @@ def build_env() -> dict:
 def build_cmd(r: dict, freeze: bool) -> list:
     """Construct the verl PPO trainer command."""
     return [
-        PYTHON, "-m", "verl.trainer.main_ppo",
+        PYTHON, "-m", "verl.trainer.main_grpo",
         f"--config-path={VERL_CONFIG}",
         "--config-name=ppo_trainer",
 
@@ -195,12 +195,12 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.rollout.max_model_len=8192",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
         # Multi-turn tool calling
-        "actor_rollout_ref.rollout.multi_turn.enable=true",
-        "actor_rollout_ref.rollout.multi_turn.max_user_turns=8",
-        "actor_rollout_ref.rollout.multi_turn.max_assistant_turns=8",
-        "actor_rollout_ref.rollout.multi_turn.format=gpt-oss",
-        "actor_rollout_ref.rollout.agent.tool_parser=gpt-oss",
-        f"actor_rollout_ref.rollout.agent.agent_loop_config_path={AGENT_YAML}",
+        "++actor_rollout_ref.rollout.multi_turn.enable=true",
+        "++actor_rollout_ref.rollout.multi_turn.max_user_turns=8",
+        "++actor_rollout_ref.rollout.multi_turn.max_assistant_turns=8",
+        "++actor_rollout_ref.rollout.multi_turn.format=gpt-oss",
+        "+actor_rollout_ref.rollout.agent.tool_parser=gpt-oss",
+        f"+actor_rollout_ref.rollout.agent.agent_loop_config_path={AGENT_YAML}",
         # Validation rollout settings
         "actor_rollout_ref.rollout.val_kwargs.top_p=1.0",
         "actor_rollout_ref.rollout.val_kwargs.temperature=1.0",
@@ -337,7 +337,7 @@ def main():
     env = build_env()
 
     print("Launching verl PPO trainer …")
-    print(f"  {PYTHON} -m verl.trainer.main_ppo  [round={args.round}]\n")
+    print(f"  {PYTHON} -m verl.trainer.main_grpo  [round={args.round}]\n")
 
     subprocess.run(cmd, check=True, env=env)
 
