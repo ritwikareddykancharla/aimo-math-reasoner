@@ -37,13 +37,13 @@ import sys
 # ── Paths ────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_ROOT    = os.path.join(PROJECT_ROOT, "data")
-CKPT_ROOT    = "/mnt/checkpoints"
+CKPT_ROOT    = "/data/checkpoints"
 REWARD_FN    = os.path.join(PROJECT_ROOT, "training", "grpo", "reward_fn.py")
 AGENT_YAML   = os.path.join(PROJECT_ROOT, "training", "grpo", "agent.yaml")
 PATCH_SCRIPT = os.path.join(PROJECT_ROOT, "training", "grpo", "apply_freeze_patch.py")
 
-VERL_CONFIG  = "/mnt/python/lib/python3.12/site-packages/verl/trainer/config"
-FSDP_WORKERS = "/mnt/python/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
+VERL_CONFIG  = "/data/venv/lib/python3.12/site-packages/verl/trainer/config"
+FSDP_WORKERS = "/data/venv/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
 
 PYTHON = "python3.12"
 
@@ -57,7 +57,7 @@ ROUNDS = {
     1: {
         "data":       os.path.join(DATA_ROOT, "grpo_aops_acc0125.parquet"),
         "experiment": "gpt-oss-120b-round1",
-        "model":      "/mnt/models/gpt-oss-120b",
+        "model":      "/data/models/gpt-oss-120b",
         "ckpt_dir":   os.path.join(CKPT_ROOT, "grpo-round1"),
     },
     2: {
