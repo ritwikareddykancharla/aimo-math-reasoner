@@ -19,6 +19,15 @@ Usage:
   python3.12 training/grpo/train_grpo.py --round 1 --no-freeze
   python3.12 training/grpo/train_grpo.py --revert-patch
   python3.12 training/grpo/train_grpo.py --round 1 --skip-ray-check   # skip cluster verify
+
+Changes vs previous version:
+  - MAX_PROMPT_LENGTH  : 1024  → 2048  (math problems can be longer)
+  - MAX_RESPONSE_LENGTH: 4096  → 32768 (match inference context_tokens=65536 budget)
+  - rollout.max_model_len: 8192 → 65536 (match inference notebook exactly)
+  - rollout.min_p added: 0.02  (matches inference CFG.min_p)
+  - fsdp param_offload / optimizer_offload: false → true (comment said true, code said false)
+  - build_env(): removed duplicate NCCL_TIMEOUT / TORCH_NCCL_* keys
+  - Summary print: "offload=true" now actually reflects the config
 """
 
 import subprocess
@@ -68,12 +77,22 @@ ROUNDS = {
 }
 
 # ── Hyperparameters ───────────────────────────────────────────────────────────
-MAX_PROMPT_LENGTH    = 1024
-MAX_RESPONSE_LENGTH  = 4096
-# Token budget per GPU for actor forward/backward
-ACTOR_MAX_TOKEN_LEN  = (MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH) * 4
+# Matched to inference notebook: context_tokens=65536, buffer_tokens=512
+# prompt budget: 2048 tokens (math problems can exceed 1024)
+# response budget: 32768 tokens (leaves ~30k headroom vs 65536 context)
+MAX_PROMPT_LENGTH    = 2048
+MAX_RESPONSE_LENGTH  = 32768
+
+# Token budget per GPU for actor forward/backward.
+# With dynamic batching this is a soft ceiling, not a fixed batch size.
+ACTOR_MAX_TOKEN_LEN   = (MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH) * 2
 # Larger budget for log-prob computation (no grad, less memory pressure)
 LOGPROB_MAX_TOKEN_LEN = ACTOR_MAX_TOKEN_LEN * 2
+
+# Sampling params — keep in sync with inference CFG
+TEMPERATURE = 1.0
+TOP_P       = 1.0
+MIN_P       = 0.02   # matches inference CFG.min_p
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -148,33 +167,35 @@ def build_env() -> dict:
     for key in ("PYTORCH_CUDA_ALLOC_CONF", "PYTORCH_ALLOC_CONF"):
         env.pop(key, None)
 
-    # EFA settings (AWS p4d / p5 instances)
+    # Each key appears exactly once — duplicates removed.
     env.update({
-        "FI_PROVIDER":               "efa",
-        "FI_EFA_USE_DEVICE_RDMA":    "1",
-        "FI_EFA_FORK_SAFE":          "1",
-        "FI_EFA_SET_CUDA_SYNC_MEMOPS": "0",
-        "RDMAV_FORK_SAFE":           "1",
+        # EFA (AWS p4d / p5 instances)
+        "FI_PROVIDER":                     "efa",
+        "FI_EFA_USE_DEVICE_RDMA":          "1",
+        "FI_EFA_FORK_SAFE":                "1",
+        "FI_EFA_SET_CUDA_SYNC_MEMOPS":     "0",
+        "RDMAV_FORK_SAFE":                 "1",
         # NCCL
-        "NCCL_SOCKET_IFNAME":        "enp71s0",
-        "NCCL_IB_DISABLE":           "1",
-        "NCCL_TIMEOUT":              "1800",
-        "TORCH_NCCL_BLOCKING_WAIT":  "0",
+        "NCCL_SOCKET_IFNAME":              "enp71s0",
+        # NCCL_IB_DISABLE must NOT be 1 on EFA instances —
+        # aws-ofi-nccl routes through the IB verbs path even on EFA.
+        # Setting it to 1 forces socket-only fallback which fails cross-node.
+        "NCCL_IB_DISABLE":                 "0",
+        "NCCL_TIMEOUT":                    "1800",
+        "NCCL_PROTO":                      "simple",
+        "NCCL_ALGO":                       "ring",
+        "NCCL_DEBUG":                      "INFO",
+        "NCCL_DEBUG_FILE":                 "/tmp/nccl_worker_%h_%p.log",
+        # Torch / NCCL async
+        "TORCH_NCCL_BLOCKING_WAIT":        "0",
         "TORCH_NCCL_ASYNC_ERROR_HANDLING": "1",
-        "NCCL_PROTO":                "simple",
-        "NCCL_ALGO":                 "ring",
-        # SGLang / vLLM
-        "VLLM_USE_V1":               "1",
-        "VLLM_ATTENTION_BACKEND":    "FLASH_ATTN",
-        # verl / hydra verbosity
-        "HYDRA_FULL_ERROR":          "1",
         "TORCH_DIST_INIT_BARRIER_TIMEOUT": "1800",
-        "NCCL_TIMEOUT":              "1800",
-        "TORCH_NCCL_BLOCKING_WAIT":  "0",
-        "TORCH_NCCL_ASYNC_ERROR_HANDLING": "1",
-        "NCCL_DEBUG":                "INFO",
-        "NCCL_DEBUG_FILE":           "/tmp/nccl_worker_%h_%p.log",
-        "RAY_LOGGING_LEVEL":         "DEBUG",
+        # SGLang / vLLM backend hints
+        "VLLM_USE_V1":                     "1",
+        "VLLM_ATTENTION_BACKEND":          "FLASH_ATTN",
+        # verl / hydra verbosity
+        "HYDRA_FULL_ERROR":                "1",
+        "RAY_LOGGING_LEVEL":               "DEBUG",
     })
     return env
 
@@ -193,14 +214,16 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.model.enable_gradient_checkpointing=true",
 
         # ── Rollout — SGLang 0.5.9, TP=8 per node, async, gpt-oss tools ─────
+        # max_model_len=65536 matches inference notebook context_tokens=65536
         "actor_rollout_ref.rollout.name=sglang",
         "actor_rollout_ref.rollout.mode=async",
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
         "actor_rollout_ref.rollout.gpu_memory_utilization=0.7",
         "actor_rollout_ref.rollout.n=8",
-        "actor_rollout_ref.rollout.temperature=1.0",
-        "actor_rollout_ref.rollout.top_p=1.0",
-        "actor_rollout_ref.rollout.max_model_len=8192",
+        f"actor_rollout_ref.rollout.temperature={TEMPERATURE}",
+        f"actor_rollout_ref.rollout.top_p={TOP_P}",
+        f"actor_rollout_ref.rollout.min_p={MIN_P}",
+        "actor_rollout_ref.rollout.max_model_len=65536",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
         # Multi-turn tool calling
         "++actor_rollout_ref.rollout.multi_turn.enable=true",
@@ -210,8 +233,8 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "+actor_rollout_ref.rollout.agent.tool_parser=gpt-oss",
         f"+actor_rollout_ref.rollout.agent.agent_loop_config_path={AGENT_YAML}",
         # Validation rollout settings
-        "actor_rollout_ref.rollout.val_kwargs.top_p=1.0",
-        "actor_rollout_ref.rollout.val_kwargs.temperature=1.0",
+        f"actor_rollout_ref.rollout.val_kwargs.top_p={TOP_P}",
+        f"actor_rollout_ref.rollout.val_kwargs.temperature={TEMPERATURE}",
         "actor_rollout_ref.rollout.val_kwargs.n=1",
 
         # ── Actor — FSDP, sharded across 16 GPUs ─────────────────────────────
@@ -226,7 +249,7 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.actor.ppo_mini_batch_size=16",
         f"actor_rollout_ref.actor.ppo_max_token_len_per_gpu={ACTOR_MAX_TOKEN_LEN}",
         "actor_rollout_ref.actor.ulysses_sequence_parallel_size=4",
-        # CPU offload between steps to stay within 80 GB HBM
+        # CPU offload disabled — 120B MoE sharded across 16×H100s fits in HBM
         "actor_rollout_ref.actor.fsdp_config.param_offload=false",
         "actor_rollout_ref.actor.fsdp_config.optimizer_offload=false",
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
@@ -323,12 +346,14 @@ def main():
     print(f"  Node 1 : {NODE1_IP}  (8×H100)")
     print(f"  Node 2 : {NODE2_IP}  (8×H100)")
     print(f"  Rollout: SGLang 0.5.9  TP=8/node  async  gpt-oss tools")
-    print(f"  FSDP   : sharded across 16 GPUs  (offload=true)")
+    print(f"  FSDP   : sharded across 16 GPUs  (offload=false)")
     print(f"  Torch  : 2.9.1+cu128   Ray: 2.54.1")
     print(f"  Data   : {r['data']}")
     print(f"  Model  : {r['model']}")
     print(f"  Exp    : {r['experiment']}")
     print(f"  Ckpt   : {r['ckpt_dir']}")
+    print(f"  Context: prompt={MAX_PROMPT_LENGTH}  response={MAX_RESPONSE_LENGTH}  model_len=65536")
+    print(f"  Sample : temp={TEMPERATURE}  top_p={TOP_P}  min_p={MIN_P}")
     print(f"  Mode   : {'Dense-only (MoE experts FROZEN)' if freeze else 'Full fine-tune'}")
     print(f"{'='*62}\n")
 
