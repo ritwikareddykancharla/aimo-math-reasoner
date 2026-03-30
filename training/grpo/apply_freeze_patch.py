@@ -1,9 +1,8 @@
 """
 Patch verl fsdp_workers.py for 120B MoE dense-only training.
 
-Three patches:
+Two patches (PATCH 2 removed — no CPU offload needed, 16x H100 has enough HBM):
   PATCH 1: Freeze experts before FSDP wrap + force use_orig_params
-  PATCH 2: Fix FSDP2 cpu_offload for actor (the code uses FSDP2, not FSDP1)
   PATCH 3: Optimizer only gets trainable params
 
 Usage:
@@ -65,17 +64,12 @@ def apply_patch():
     source = source.replace(OLD1, NEW1, 1)
     print("  ✓ PATCH 1: Freeze experts + use_orig_params")
 
-    # ── PATCH 2: Fix FSDP2 offload for actor ──────────────────
-    # The code uses FSDP2. Line 650 blocks actor offload.
-    OLD2 = '                cpu_offload = None if role == "actor" else CPUOffloadPolicy(pin_memory=True)'
-    NEW2 = '''                # === AIMO3 PATCH 2: Enable CPU offload for actor in FSDP2 ===
-                cpu_offload = CPUOffloadPolicy(pin_memory=True)
-                # === END AIMO3 PATCH 2 ==='''
-
-    if OLD2 not in source:
-        print("ERROR: Cannot find PATCH 2 target"); sys.exit(1)
-    source = source.replace(OLD2, NEW2, 1)
-    print("  ✓ PATCH 2: FSDP2 actor CPU offload enabled")
+    # ── PATCH 2 REMOVED ───────────────────────────────────────
+    # CPU offload not needed — 16x H100 80GB has sufficient HBM.
+    # Leaving the original verl line untouched:
+    #   cpu_offload = None if role == "actor" else CPUOffloadPolicy(pin_memory=True)
+    # This means actor gets no offload, ref gets CPUOffloadPolicy — correct behavior.
+    print("  - PATCH 2: Skipped (no CPU offload needed)")
 
     # ── PATCH 3: Optimizer only gets trainable params ─────────
     OLD3 = '            actor_optimizer = build_optimizer(actor_module_fsdp.parameters(), optim_config)'
@@ -100,9 +94,10 @@ def apply_patch():
 def revert():
     if os.path.exists(BACKUP):
         shutil.copy2(BACKUP, FSDP_WORKERS)
-        print("Reverted.")
+        os.remove(BACKUP)
+        print("Reverted successfully.")
     else:
-        print("No backup found.")
+        print("No backup found — nothing to revert.")
 
 
 if __name__ == "__main__":
