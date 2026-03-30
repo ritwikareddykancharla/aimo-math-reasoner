@@ -227,15 +227,15 @@ def build_cmd(r: dict, freeze: bool) -> list:
         f"actor_rollout_ref.actor.ppo_max_token_len_per_gpu={ACTOR_MAX_TOKEN_LEN}",
         "actor_rollout_ref.actor.ulysses_sequence_parallel_size=4",
         # CPU offload between steps to stay within 80 GB HBM
-        "actor_rollout_ref.actor.fsdp_config.param_offload=true",
-        "actor_rollout_ref.actor.fsdp_config.optimizer_offload=true",
+        "actor_rollout_ref.actor.fsdp_config.param_offload=false",
+        "actor_rollout_ref.actor.fsdp_config.optimizer_offload=false",
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
         # ── Reference model — FSDP ───────────────────────────────────────────
         f"actor_rollout_ref.ref.log_prob_max_token_len_per_gpu={LOGPROB_MAX_TOKEN_LEN}",
-        "actor_rollout_ref.ref.fsdp_config.param_offload=true",
+        "actor_rollout_ref.ref.fsdp_config.param_offload=false",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
 
@@ -271,6 +271,7 @@ def build_cmd(r: dict, freeze: bool) -> list:
         f"trainer.default_local_dir={r['ckpt_dir']}",
         "trainer.max_actor_ckpt_to_keep=3",
         "trainer.log_val_generations=50",
+        "+trainer.nccl_timeout=1800",
     ]
 
 
