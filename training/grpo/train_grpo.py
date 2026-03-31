@@ -21,12 +21,8 @@ Usage:
   python3.12 training/grpo/train_grpo.py --round 1 --skip-ray-check
 
 Changes vs previous version:
-  - NODE IPs updated: 172.31.110.230 (node1), 172.31.106.192 (node2)
-  - NCCL/EFA replaced with Gloo backend (confirmed working cross-node)
-  - MAX_PROMPT_LENGTH  : 1024  -> 2048
-  - MAX_RESPONSE_LENGTH: 4096  -> 32768
-  - rollout.max_model_len: 8192 -> 65536
-  - rollout.min_p added: 0.02
+  - NCCL/EFA restored (EFA confirmed working cross-node, Gloo removed)
+  - LD_LIBRARY_PATH set to include EFA + NCCL + ofi-nccl libs
 """
 
 import subprocess
@@ -84,6 +80,15 @@ LOGPROB_MAX_TOKEN_LEN = ACTOR_MAX_TOKEN_LEN * 2
 TEMPERATURE = 1.0
 TOP_P       = 1.0
 MIN_P       = 0.02
+
+# ── NCCL / EFA library path ───────────────────────────────────────────────────
+NCCL_LIB  = "/opt/pytorch/lib/python3.13/site-packages/nvidia/nccl/lib"
+EFA_LIB   = "/opt/amazon/efa/lib64"
+CUDA_LIB  = "/usr/local/cuda/lib64"
+OMPI_LIB  = "/opt/amazon/openmpi/lib"
+OFI_LIB   = "/opt/amazon/ofi-nccl/lib"
+
+EFA_LD_LIBRARY_PATH = ":".join([EFA_LIB, NCCL_LIB, CUDA_LIB, OMPI_LIB, OFI_LIB])
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -152,12 +157,8 @@ def run_patch(revert: bool = False):
 
 def build_env() -> dict:
     """
-    Return environment dict using Gloo backend for cross-node comms.
-    NCCL over EFA was failing; Gloo confirmed working between
-    172.31.110.230 and 172.31.106.192.
-    NOTE: Gloo is slower than NCCL for all-reduce but stable.
-    If eth0 doesn't work, change GLOO_SOCKET_IFNAME to ens5.
-    Check with: ip a
+    Return environment dict using NCCL over EFA for cross-node comms.
+    EFA confirmed working between 172.31.110.230 and 172.31.106.192.
     """
     env = os.environ.copy()
 
@@ -165,20 +166,29 @@ def build_env() -> dict:
     for key in ("PYTORCH_CUDA_ALLOC_CONF", "PYTORCH_ALLOC_CONF"):
         env.pop(key, None)
 
-    # Remove all NCCL vars to prevent any NCCL init attempts
-    for key in list(env.keys()):
-        if "NCCL" in key:
-            env.pop(key, None)
+    # Remove any leftover Gloo settings
+    for key in ("TORCH_DISTRIBUTED_BACKEND", "GLOO_SOCKET_IFNAME"):
+        env.pop(key, None)
+
+    # Prepend EFA + NCCL libs to LD_LIBRARY_PATH
+    existing_ld = env.get("LD_LIBRARY_PATH", "")
+    new_ld = EFA_LD_LIBRARY_PATH + (":" + existing_ld if existing_ld else "")
 
     env.update({
-        # ── Gloo backend (replaces NCCL -- confirmed working cross-node) ─────
-        "TORCH_DISTRIBUTED_BACKEND":       "gloo",
-        "GLOO_SOCKET_IFNAME":              "enp71s0",
+        # ── NCCL over EFA ────────────────────────────────────────────────────
+        "NCCL_DEBUG":                      "WARN",
+        "FI_EFA_USE_DEVICE_RDMA":          "1",
+        "FI_EFA_FORK_SAFE":                "1",
+        "NCCL_SOCKET_IFNAME":              "enp71s0",
+        "LD_LIBRARY_PATH":                 new_ld,
+
+        # ── Distributed ──────────────────────────────────────────────────────
         "MASTER_ADDR":                     NODE1_IP,
         "MASTER_PORT":                     "29500",
 
         # ── Timeouts ──────────────────────────────────────────────────────────
         "TORCH_DIST_INIT_BARRIER_TIMEOUT": "1800",
+        "NCCL_TIMEOUT":                    "1800",
 
         # ── SGLang / vLLM backend hints ───────────────────────────────────────
         "VLLM_USE_V1":                     "1",
@@ -334,7 +344,7 @@ def main():
     print(f"  GRPO Round {args.round}  --  2-Node 16xH100 Setup")
     print(f"  Node 1 : {NODE1_IP}  (8xH100)")
     print(f"  Node 2 : {NODE2_IP}  (8xH100)")
-    print(f"  Comms  : Gloo backend (NCCL/EFA replaced)")
+    print(f"  Comms  : NCCL over EFA (confirmed working)")
     print(f"  Rollout: SGLang 0.5.9  TP=8/node  async  gpt-oss tools")
     print(f"  FSDP   : sharded across 16 GPUs  (offload=false)")
     print(f"  Torch  : 2.9.1+cu128   Ray: 2.54.1")
