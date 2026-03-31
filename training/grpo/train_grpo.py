@@ -24,6 +24,9 @@ Changes vs previous version:
   - NCCL/EFA restored (EFA confirmed working cross-node, Gloo removed)
   - LD_LIBRARY_PATH set to include EFA + NCCL + ofi-nccl libs
   - Auto-sync patch + clear .pyc cache on node 2 before launch
+  - use_orig_params=true added to actor + ref fsdp_config (fixes FSDP
+    mixed requires_grad crash; fsdp_workers.py line 204 initializes to
+    False without this, overriding the patch before FSDP wraps)
 """
 
 import subprocess
@@ -156,7 +159,6 @@ def sync_patch_to_node2():
     """
     print(f"  Syncing patched fsdp_workers.py to Node 2 ({NODE2_IP}) ...")
 
-    # Copy patched file
     scp_result = subprocess.run(
         ["scp", "-o", "StrictHostKeyChecking=no",
          FSDP_WORKERS,
@@ -169,7 +171,6 @@ def sync_patch_to_node2():
     else:
         print("  fsdp_workers.py synced to Node 2.")
 
-    # Clear .pyc cache on Node 2
     print(f"  Clearing verl .pyc cache on Node 2 ({NODE2_IP}) ...")
     ssh_result = subprocess.run(
         ["ssh", "-o", "StrictHostKeyChecking=no", NODE2_IP,
@@ -182,7 +183,6 @@ def sync_patch_to_node2():
     else:
         print("  Node 2 .pyc cache cleared.")
 
-    # Verify patch landed on Node 2
     verify_result = subprocess.run(
         ["ssh", "-o", "StrictHostKeyChecking=no", NODE2_IP,
          f"grep -c 'AIMO3' {FSDP_WORKERS}"],
@@ -225,15 +225,11 @@ def build_env() -> dict:
     """
     env = os.environ.copy()
 
-    # Remove allocator configs that conflict with torch 2.9 / CUDA 12.8
     for key in ("PYTORCH_CUDA_ALLOC_CONF", "PYTORCH_ALLOC_CONF"):
         env.pop(key, None)
-
-    # Remove any leftover Gloo settings
     for key in ("TORCH_DISTRIBUTED_BACKEND", "GLOO_SOCKET_IFNAME"):
         env.pop(key, None)
 
-    # Prepend EFA + NCCL libs to LD_LIBRARY_PATH
     existing_ld = env.get("LD_LIBRARY_PATH", "")
     new_ld = EFA_LD_LIBRARY_PATH + (":" + existing_ld if existing_ld else "")
 
@@ -316,6 +312,10 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.actor.fsdp_config.optimizer_offload=false",
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
+        # Required for mixed requires_grad (frozen experts + trainable dense).
+        # Without this, fsdp_workers.py line 204 initialises self.use_orig_params=False
+        # before the freeze patch can set it True, causing the FSDP crash.
+        "actor_rollout_ref.actor.fsdp_config.use_orig_params=true",
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
         # ── Reference model -- FSDP ───────────────────────────────────────────
@@ -323,6 +323,8 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.ref.fsdp_config.param_offload=false",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
+        # Ref model shares the same worker class -- needs use_orig_params=true too.
+        "actor_rollout_ref.ref.fsdp_config.use_orig_params=true",
 
         # ── Algorithm ─────────────────────────────────────────────────────────
         "algorithm.adv_estimator=grpo",
