@@ -39,7 +39,7 @@ AGENT_YAML   = os.path.join(PROJECT_ROOT, "training", "grpo", "agent.yaml")
 PATCH_SCRIPT = os.path.join(PROJECT_ROOT, "training", "grpo", "apply_freeze_patch.py")
 
 VERL_CONFIG  = "/home/ssm-user/.local/lib/python3.12/site-packages/verl/trainer/config"
-FSDP_WORKERS = "/data/venv/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
+FSDP_WORKERS = "/home/ssm-user/.local/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
 
 PYTHON = "python3.12"
 
