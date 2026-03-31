@@ -47,6 +47,8 @@ PATCH_SCRIPT = os.path.join(PROJECT_ROOT, "training", "grpo", "apply_freeze_patc
 
 VERL_CONFIG  = "/home/ssm-user/.local/lib/python3.12/site-packages/verl/trainer/config"
 FSDP_WORKERS = "/home/ssm-user/.local/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
+# Change this line at the top:
+CUDA_LIB  = "/home/ssm-user/.local/lib/python3.12/site-packages/nvidia/cuda_runtime/lib"
 
 PYTHON = "python3.12"
 
