@@ -9,6 +9,7 @@ Model: unsloth/gpt-oss-120b (120B MoE)
   - ~2.13B dense params: TRAINED
 
 Versions confirmed:
+  verl:    0.8.0.dev (from GitHub main)
   sglang:  0.5.9
   ray:     2.54.1
   torch:   2.9.1+cu128
@@ -24,9 +25,11 @@ Changes vs previous version:
   - NCCL/EFA restored (EFA confirmed working cross-node, Gloo removed)
   - LD_LIBRARY_PATH set to include EFA + NCCL + ofi-nccl libs
   - Auto-sync patch + clear .pyc cache on node 2 before launch
-  - use_orig_params=true added to actor + ref fsdp_config (fixes FSDP
-    mixed requires_grad crash; fsdp_workers.py line 204 initializes to
-    False without this, overriding the patch before FSDP wraps)
+  - use_orig_params=true added to actor + ref fsdp_config
+  - Upgraded to verl 0.8.0.dev from GitHub main
+  - Removed min_p (not in RolloutConfig in this version)
+  - Removed tool_parser (not in AgentLoopConfig in this version)
+  - Fixed multi_turn prefix: use plain key (field exists, no ++ needed)
 """
 
 import subprocess
@@ -83,7 +86,6 @@ LOGPROB_MAX_TOKEN_LEN = ACTOR_MAX_TOKEN_LEN * 2
 
 TEMPERATURE = 1.0
 TOP_P       = 1.0
-MIN_P       = 0.02
 
 # ── NCCL / EFA library path ───────────────────────────────────────────────────
 NCCL_LIB  = "/opt/pytorch/lib/python3.13/site-packages/nvidia/nccl/lib"
@@ -281,17 +283,20 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.rollout.n=8",
         f"actor_rollout_ref.rollout.temperature={TEMPERATURE}",
         f"actor_rollout_ref.rollout.top_p={TOP_P}",
-        f"+actor_rollout_ref.rollout.min_p={MIN_P}",
+        # min_p removed -- not in RolloutConfig in verl 0.8.0.dev
         "actor_rollout_ref.rollout.max_model_len=65536",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
-        # Multi-turn tool calling
-        "++actor_rollout_ref.rollout.multi_turn.enable=true",
-        "++actor_rollout_ref.rollout.multi_turn.max_user_turns=8",
-        "++actor_rollout_ref.rollout.multi_turn.max_assistant_turns=8",
-        "++actor_rollout_ref.rollout.multi_turn.format=gpt-oss",
-        # "+actor_rollout_ref.rollout.agent.tool_parser=gpt-oss",
-        f"+actor_rollout_ref.rollout.agent.agent_loop_config_path={AGENT_YAML}",
-        # Validation rollout settings
+
+        # ── Multi-turn tool calling (MultiTurnConfig fields) ──────────────────
+        # multi_turn exists as a field in RolloutConfig so no ++ prefix needed
+        "actor_rollout_ref.rollout.multi_turn.enable=true",
+        "actor_rollout_ref.rollout.multi_turn.max_user_turns=8",
+        "actor_rollout_ref.rollout.multi_turn.max_assistant_turns=8",
+        "actor_rollout_ref.rollout.multi_turn.format=gpt-oss",
+        # tool_parser removed -- not in AgentLoopConfig in verl 0.8.0.dev
+        f"actor_rollout_ref.rollout.agent.agent_loop_config_path={AGENT_YAML}",
+
+        # ── Validation rollout settings ───────────────────────────────────────
         f"actor_rollout_ref.rollout.val_kwargs.top_p={TOP_P}",
         f"actor_rollout_ref.rollout.val_kwargs.temperature={TEMPERATURE}",
         "actor_rollout_ref.rollout.val_kwargs.n=1",
@@ -313,8 +318,6 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
         # Required for mixed requires_grad (frozen experts + trainable dense).
-        # Without this, fsdp_workers.py line 204 initialises self.use_orig_params=False
-        # before the freeze patch can set it True, causing the FSDP crash.
         "actor_rollout_ref.actor.fsdp_config.use_orig_params=true",
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
@@ -323,7 +326,6 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.ref.fsdp_config.param_offload=false",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
-        # Ref model shares the same worker class -- needs use_orig_params=true too.
         "actor_rollout_ref.ref.fsdp_config.use_orig_params=true",
 
         # ── Algorithm ─────────────────────────────────────────────────────────
@@ -412,13 +414,13 @@ def main():
     print(f"  Comms  : NCCL over EFA (confirmed working)")
     print(f"  Rollout: SGLang 0.5.9  TP=8/node  async  gpt-oss tools")
     print(f"  FSDP   : sharded across 16 GPUs  (offload=false)")
-    print(f"  Torch  : 2.9.1+cu128   Ray: 2.54.1")
+    print(f"  verl   : 0.8.0.dev  torch: 2.9.1+cu128  ray: 2.54.1")
     print(f"  Data   : {r['data']}")
     print(f"  Model  : {r['model']}")
     print(f"  Exp    : {r['experiment']}")
     print(f"  Ckpt   : {r['ckpt_dir']}")
     print(f"  Context: prompt={MAX_PROMPT_LENGTH}  response={MAX_RESPONSE_LENGTH}  model_len=65536")
-    print(f"  Sample : temp={TEMPERATURE}  top_p={TOP_P}  min_p={MIN_P}")
+    print(f"  Sample : temp={TEMPERATURE}  top_p={TOP_P}")
     print(f"  Mode   : {'Dense-only (MoE experts FROZEN)' if freeze else 'Full fine-tune'}")
     print(f"{'='*62}\n")
 
