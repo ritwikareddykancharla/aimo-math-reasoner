@@ -260,6 +260,8 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.ref.fsdp_config.param_offload=false",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
+        "actor_rollout_ref.actor.fsdp_config.use_orig_params=true",
+        "actor_rollout_ref.ref.fsdp_config.use_orig_params=true",
 
         # ── Algorithm ─────────────────────────────────────────────────────────
         "algorithm.adv_estimator=grpo",
