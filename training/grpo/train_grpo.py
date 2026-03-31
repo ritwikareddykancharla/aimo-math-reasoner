@@ -237,6 +237,7 @@ def build_env() -> dict:
 
     env.update({
         # ── NCCL over EFA ────────────────────────────────────────────────────
+        "CUDA_HOME": "/home/ssm-user/.local/lib/python3.12/site-packages/nvidia/cuda_runtime",
         "NCCL_DEBUG":                      "WARN",
         "FI_EFA_USE_DEVICE_RDMA":          "1",
         "FI_EFA_FORK_SAFE":                "1",
