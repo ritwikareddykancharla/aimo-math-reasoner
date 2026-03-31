@@ -289,7 +289,7 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "++actor_rollout_ref.rollout.multi_turn.max_user_turns=8",
         "++actor_rollout_ref.rollout.multi_turn.max_assistant_turns=8",
         "++actor_rollout_ref.rollout.multi_turn.format=gpt-oss",
-        "+actor_rollout_ref.rollout.agent.tool_parser=gpt-oss",
+        # "+actor_rollout_ref.rollout.agent.tool_parser=gpt-oss",
         f"+actor_rollout_ref.rollout.agent.agent_loop_config_path={AGENT_YAML}",
         # Validation rollout settings
         f"actor_rollout_ref.rollout.val_kwargs.top_p={TOP_P}",
