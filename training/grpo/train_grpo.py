@@ -23,6 +23,7 @@ Usage:
 Changes vs previous version:
   - NCCL/EFA restored (EFA confirmed working cross-node, Gloo removed)
   - LD_LIBRARY_PATH set to include EFA + NCCL + ofi-nccl libs
+  - Auto-sync patch + clear .pyc cache on node 2 before launch
 """
 
 import subprocess
@@ -132,13 +133,75 @@ def verify_ray_cluster():
     ray.shutdown()
 
 
+def clear_pyc_cache_local():
+    """Delete all verl .pyc files on this node so patched .py files are used."""
+    print("  Clearing verl .pyc cache on Node 1 ...")
+    result = subprocess.run(
+        ["find",
+         "/home/ssm-user/.local/lib/python3.12/site-packages/verl/",
+         "-name", "*.pyc", "-delete"],
+        capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        print(f"  WARNING: pyc cache clear failed: {result.stderr.strip()}", file=sys.stderr)
+    else:
+        print("  Node 1 .pyc cache cleared.")
+
+
+def sync_patch_to_node2():
+    """
+    Copy the patched fsdp_workers.py to Node 2 and clear its .pyc cache.
+    Ray spawns worker processes on Node 2 independently -- if the .py or
+    .pyc there is stale, the patch is silently ignored on that node.
+    """
+    print(f"  Syncing patched fsdp_workers.py to Node 2 ({NODE2_IP}) ...")
+
+    # Copy patched file
+    scp_result = subprocess.run(
+        ["scp", "-o", "StrictHostKeyChecking=no",
+         FSDP_WORKERS,
+         f"{NODE2_IP}:{FSDP_WORKERS}"],
+        capture_output=True, text=True
+    )
+    if scp_result.returncode != 0:
+        print(f"  WARNING: scp to Node 2 failed:\n{scp_result.stderr.strip()}", file=sys.stderr)
+        print("  You may need to manually sync the patch. Continuing anyway ...", file=sys.stderr)
+    else:
+        print("  fsdp_workers.py synced to Node 2.")
+
+    # Clear .pyc cache on Node 2
+    print(f"  Clearing verl .pyc cache on Node 2 ({NODE2_IP}) ...")
+    ssh_result = subprocess.run(
+        ["ssh", "-o", "StrictHostKeyChecking=no", NODE2_IP,
+         "find /home/ssm-user/.local/lib/python3.12/site-packages/verl/ "
+         "-name '*.pyc' -delete"],
+        capture_output=True, text=True
+    )
+    if ssh_result.returncode != 0:
+        print(f"  WARNING: Node 2 pyc cache clear failed:\n{ssh_result.stderr.strip()}", file=sys.stderr)
+    else:
+        print("  Node 2 .pyc cache cleared.")
+
+    # Verify patch landed on Node 2
+    verify_result = subprocess.run(
+        ["ssh", "-o", "StrictHostKeyChecking=no", NODE2_IP,
+         f"grep -c 'AIMO3' {FSDP_WORKERS}"],
+        capture_output=True, text=True
+    )
+    count = verify_result.stdout.strip()
+    if verify_result.returncode == 0 and count.isdigit() and int(count) > 0:
+        print(f"  Node 2 patch verified ({count} AIMO3 markers found).")
+    else:
+        print("  WARNING: Could not verify patch on Node 2 -- check manually.", file=sys.stderr)
+
+
 def run_patch(revert: bool = False):
-    """Apply (or revert) the verl expert-freeze patch."""
+    """Apply (or revert) the verl expert-freeze patch on Node 1."""
     if not revert:
         try:
             with open(FSDP_WORKERS) as fh:
                 if "AIMO3" in fh.read():
-                    print("Freeze patch already applied -- skipping.")
+                    print("Freeze patch already applied on Node 1 -- skipping patch step.")
                     return
         except FileNotFoundError:
             print(f"WARNING: Cannot find {FSDP_WORKERS}; skipping patch step.")
@@ -186,7 +249,7 @@ def build_env() -> dict:
         "MASTER_ADDR":                     NODE1_IP,
         "MASTER_PORT":                     "29500",
 
-        # ── Timeouts ──────────────────────────────────────────────────────────
+        # ── Timeouts ─────────────────────────────────────────────────────────
         "TORCH_DIST_INIT_BARRIER_TIMEOUT": "1800",
         "NCCL_TIMEOUT":                    "1800",
 
@@ -260,8 +323,6 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.ref.fsdp_config.param_offload=false",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
-        "actor_rollout_ref.actor.fsdp_config.use_orig_params=true",
-        "actor_rollout_ref.ref.fsdp_config.use_orig_params=true",
 
         # ── Algorithm ─────────────────────────────────────────────────────────
         "algorithm.adv_estimator=grpo",
@@ -364,7 +425,15 @@ def main():
         verify_ray_cluster()
 
     if freeze:
+        # 1. Apply patch on Node 1
         run_patch()
+        print()
+
+        # 2. Clear local .pyc cache so Node 1 workers load the patched .py
+        clear_pyc_cache_local()
+
+        # 3. Sync patched file to Node 2 and clear its .pyc cache
+        sync_patch_to_node2()
 
     print()
 
