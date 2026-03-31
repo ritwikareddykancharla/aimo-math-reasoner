@@ -47,8 +47,6 @@ PATCH_SCRIPT = os.path.join(PROJECT_ROOT, "training", "grpo", "apply_freeze_patc
 
 VERL_CONFIG  = "/home/ssm-user/.local/lib/python3.12/site-packages/verl/trainer/config"
 FSDP_WORKERS = "/home/ssm-user/.local/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
-# Change this line at the top:
-CUDA_LIB  = "/home/ssm-user/.local/lib/python3.12/site-packages/nvidia/cuda_runtime/lib"
 
 PYTHON = "python3.12"
 
@@ -92,7 +90,7 @@ TOP_P       = 1.0
 # ── NCCL / EFA library path ───────────────────────────────────────────────────
 NCCL_LIB  = "/opt/pytorch/lib/python3.13/site-packages/nvidia/nccl/lib"
 EFA_LIB   = "/opt/amazon/efa/lib64"
-CUDA_LIB  = "/usr/local/cuda/lib64"
+CUDA_LIB  = "/home/ssm-user/.local/lib/python3.12/site-packages/nvidia/cuda_runtime/lib"
 OMPI_LIB  = "/opt/amazon/openmpi/lib"
 OFI_LIB   = "/opt/amazon/ofi-nccl/lib"
 
