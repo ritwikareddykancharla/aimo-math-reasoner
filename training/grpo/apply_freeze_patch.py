@@ -2,9 +2,12 @@
 Patch verl fsdp_workers.py for 120B MoE dense-only training.
 
 Patches applied:
-  PATCH 0: Force Gloo backend (NCCL cross-node on EFA was failing)
   PATCH 1: Freeze experts before FSDP wrap + force use_orig_params
   PATCH 3: Optimizer only gets trainable params
+
+NOTE: PATCH 0 (Gloo backend) has been REMOVED.
+      NCCL over EFA is now confirmed working between
+      172.31.110.230 and 172.31.106.192.
 
 Usage:
     python3.12 training/grpo/apply_freeze_patch.py
@@ -39,24 +42,11 @@ def apply_patch():
         shutil.copy2(FSDP_WORKERS, BACKUP)
         print(f"Backup: {BACKUP}")
 
-    # ── PATCH 0: Force Gloo backend (replaces NCCL) ───────────────────────
-    OLD0 = '                backend=f"cpu:gloo,{get_device_name()}:{get_nccl_backend()}",'
-    NEW0 = '                backend="gloo",  # === AIMO3 PATCH 0: force Gloo (NCCL EFA broken) ==='
+    # ── PATCH 0 REMOVED ──────────────────────────────────────────────────────
+    # NCCL over EFA is now confirmed working -- no Gloo override needed.
+    print("  - PATCH 0: Skipped (NCCL over EFA confirmed working)")
 
-    if OLD0 not in source:
-        print("ERROR: Cannot find PATCH 0 target (actor init_process_group)"); sys.exit(1)
-    source = source.replace(OLD0, NEW0, 1)
-    print("  ✓ PATCH 0a: Actor init_process_group -> gloo")
-
-    OLD0b = '                backend=get_nccl_backend(),'
-    NEW0b = '                backend="gloo",  # === AIMO3 PATCH 0: force Gloo (NCCL EFA broken) ==='
-
-    if OLD0b not in source:
-        print("ERROR: Cannot find PATCH 0 target (critic init_process_group)"); sys.exit(1)
-    source = source.replace(OLD0b, NEW0b, 1)
-    print("  ✓ PATCH 0b: Critic init_process_group -> gloo")
-
-    # ── PATCH 1: Freeze experts before FSDP wrap ─────────────────────────
+    # ── PATCH 1: Freeze experts before FSDP wrap ─────────────────────────────
     OLD1 = '            actor_module.to(torch_dtype)'
     NEW1 = '''            actor_module.to(torch_dtype)
 
@@ -87,10 +77,10 @@ def apply_patch():
     source = source.replace(OLD1, NEW1, 1)
     print("  ✓ PATCH 1: Freeze experts + use_orig_params")
 
-    # ── PATCH 2 REMOVED ──────────────────────────────────────────────────
+    # ── PATCH 2 REMOVED ──────────────────────────────────────────────────────
     print("  - PATCH 2: Skipped (no CPU offload needed)")
 
-    # ── PATCH 3: Optimizer only gets trainable params ─────────────────────
+    # ── PATCH 3: Optimizer only gets trainable params ─────────────────────────
     OLD3 = '            actor_optimizer = build_optimizer(actor_module_fsdp.parameters(), optim_config)'
     NEW3 = '''            # === AIMO3 PATCH 3: Only trainable params to optimizer ===
             _trainable_params = [p for p in actor_module_fsdp.parameters() if p.requires_grad]
