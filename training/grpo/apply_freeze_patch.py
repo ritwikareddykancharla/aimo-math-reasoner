@@ -18,7 +18,7 @@ import shutil
 import os
 import sys
 
-FSDP_WORKERS = "/data/venv/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
+FSDP_WORKERS = "/home/ssm-user/.local/lib/python3.12/site-packages/verl/workers/fsdp_workers.py"
 
 # lib64 symlink — use whichever exists
 if not os.path.exists(FSDP_WORKERS):
