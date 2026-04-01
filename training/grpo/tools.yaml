@@ -1,0 +1,28 @@
+tools:
+  - class_name: verl.tools.sandbox_fusion_tools.SandboxFusionTool
+    tool_schema:
+      type: function
+      function:
+        name: python
+        description: >
+          Use this tool to execute Python code in a stateful environment.
+          Use sympy, numpy, itertools for mathematical computation.
+          Write assert statements to verify base cases.
+          Use print() to output results — only printed output is returned.
+        parameters:
+          type: object
+          properties:
+            code:
+              type: string
+              description: The Python code to execute.
+          required:
+            - code
+    config:
+      type: NATIVE
+      sandbox_fusion_url: "http://localhost:8888/execute"
+      num_workers: 8
+      rate_limit: 8
+      default_timeout: 30
+      default_language: python
+      memory_limit_mb: 1024
+      enable_global_rate_limit: true
