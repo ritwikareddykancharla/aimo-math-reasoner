@@ -238,6 +238,8 @@ def build_env() -> dict:
 
     env.update({
         # ── NCCL over EFA ────────────────────────────────────────────────────
+       # In build_env():
+        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
         "PATH": "/usr/local/cuda/bin:" + env.get("PATH", ""),
         "CUDA_HOME": "/usr/local/cuda",
         "NCCL_DEBUG":                      "WARN",
@@ -294,7 +296,7 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.rollout.name=sglang",
         "actor_rollout_ref.rollout.mode=async",
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.7",
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.5",
         "actor_rollout_ref.rollout.n=8",
         f"actor_rollout_ref.rollout.temperature={TEMPERATURE}",
         f"actor_rollout_ref.rollout.top_p={TOP_P}",
@@ -339,7 +341,7 @@ def build_cmd(r: dict, freeze: bool) -> list:
 
         # ── Reference model -- FSDP ───────────────────────────────────────────
         f"actor_rollout_ref.ref.log_prob_max_token_len_per_gpu={LOGPROB_MAX_TOKEN_LEN}",
-        "actor_rollout_ref.ref.fsdp_config.param_offload=false",
+        "actor_rollout_ref.ref.fsdp_config.param_offload=true",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.use_orig_params=true",
