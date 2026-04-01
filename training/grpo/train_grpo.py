@@ -261,6 +261,18 @@ def build_env() -> dict:
         # ── verl / hydra verbosity ────────────────────────────────────────────
         "HYDRA_FULL_ERROR":                "1",
         "RAY_LOGGING_LEVEL":               "DEBUG",
+
+          # Force SGLang to use pre-cached JIT kernels
+        # and not recompile during Ray worker init
+        "SGLANG_JIT_CACHE":  "1",
+        
+        # Fix LD path for Ray worker subprocesses on both nodes
+        "LD_LIBRARY_PATH": (
+            "/usr/local/cuda/targets/x86_64-linux/lib:"
+            "/home/ssm-user/.local/lib/python3.12/site-packages/nvidia/cuda_runtime/lib:"
+            + EFA_LD_LIBRARY_PATH
+            + (":" + os.environ.get("LD_LIBRARY_PATH", ""))
+        )
     })
     return env
 
