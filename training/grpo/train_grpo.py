@@ -31,10 +31,15 @@ Changes vs previous version:
   - Removed tool_parser (not in AgentLoopConfig in this version)
   - Fixed multi_turn prefix: use plain key (field exists, no ++ needed)
   - Reduced MAX_RESPONSE_LENGTH to 16384, max_model_len to 24576
-  - Reduced gpu_memory_utilization to 0.6 to avoid OOM on weight sync
+  - Reduced gpu_memory_utilization to 0.5 to avoid OOM on weight sync
   - ref param_offload=true to free memory during rollout
-  - expandable_segments=True to reduce memory fragmentation
+  - expandable_segments=True + max_split_size_mb=512 to reduce fragmentation
   - Fixed LD_LIBRARY_PATH for Ray worker subprocesses on both nodes
+  - FIX: ACTOR_MAX_TOKEN_LEN = prompt+response (not *2) — was 36864, now 18432
+  - FIX: LOGPROB_MAX_TOKEN_LEN = actor*2 — was 73728, now 36864
+  - FIX: gpu_memory_utilization reduced from 0.6 → 0.5
+  - FIX: max_split_size_mb=512 added to PYTORCH_CUDA_ALLOC_CONF
+  - FIX: max_num_batched_tokens=8192 cap on SGLang KV cache pre-allocation
 """
 
 import subprocess
@@ -91,8 +96,14 @@ MAX_RESPONSE_LENGTH  = 16384   # Reduced from 32768 — 16k is enough for AIMO r
 # max_model_len = MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH + buffer = 24576
 MAX_MODEL_LEN = 24576
 
-ACTOR_MAX_TOKEN_LEN   = (MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH) * 2
-LOGPROB_MAX_TOKEN_LEN = ACTOR_MAX_TOKEN_LEN * 2
+# FIX: was (MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH) * 2 = 36864
+# The *2 was wrong — ppo_max_token_len_per_gpu is a per-GPU budget, not doubled.
+# Actual max sequence = prompt + response = 2048 + 16384 = 18432
+ACTOR_MAX_TOKEN_LEN   = MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH   # 18432
+
+# FIX: was ACTOR_MAX_TOKEN_LEN * 2 of the old (wrong) value = 73728
+# Now correctly 18432 * 2 = 36864 — still generous for ref log prob batching
+LOGPROB_MAX_TOKEN_LEN = ACTOR_MAX_TOKEN_LEN * 2                   # 36864
 
 TEMPERATURE = 1.0
 TOP_P       = 1.0
@@ -237,7 +248,8 @@ def build_env() -> dict:
     """
     env = os.environ.copy()
 
-    # Remove conflicting alloc conf — we set our own below
+    # Remove both old and new alloc conf keys — we set our own below
+    # torch 2.9+ uses PYTORCH_ALLOC_CONF; older versions used PYTORCH_CUDA_ALLOC_CONF
     for key in ("PYTORCH_CUDA_ALLOC_CONF", "PYTORCH_ALLOC_CONF"):
         env.pop(key, None)
     for key in ("TORCH_DISTRIBUTED_BACKEND", "GLOO_SOCKET_IFNAME"):
@@ -255,8 +267,11 @@ def build_env() -> dict:
 
     env.update({
         # ── Memory management ─────────────────────────────────────────────────
-        # expandable_segments reduces fragmentation during state_dict allocation
-        "PYTORCH_CUDA_ALLOC_CONF":         "expandable_segments:True",
+        # expandable_segments: reduces fragmentation during state_dict allocation
+        # max_split_size_mb:   prevents large contiguous allocation failures
+        # Both are needed to survive FSDP unshard during update_weights()
+        # NOTE: torch 2.9+ uses PYTORCH_ALLOC_CONF (PYTORCH_CUDA_ALLOC_CONF deprecated)
+        "PYTORCH_ALLOC_CONF":              "expandable_segments:True,max_split_size_mb:512",
 
         # ── CUDA paths ────────────────────────────────────────────────────────
         "PATH":                            "/usr/local/cuda/bin:" + env.get("PATH", ""),
@@ -306,13 +321,18 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.rollout.name=sglang",
         "actor_rollout_ref.rollout.mode=async",
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
-        # Reduced from 0.7 — leaves room for FSDP state_dict during weight sync
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.6",
+        # FIX: reduced from 0.6 → 0.5
+        # SGLang KV cache + FSDP unshard peak both land on the same GPUs.
+        # 0.5 leaves ~10GB headroom per GPU for the state_dict gather.
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.5",
         "actor_rollout_ref.rollout.n=8",
         f"actor_rollout_ref.rollout.temperature={TEMPERATURE}",
         f"actor_rollout_ref.rollout.top_p={TOP_P}",
         # Reduced from 65536 — actual max is 2048+16384=18432, 24576 gives buffer
         f"actor_rollout_ref.rollout.max_model_len={MAX_MODEL_LEN}",
+        # FIX: cap SGLang KV cache pre-allocation to avoid consuming headroom
+        # that FSDP needs during update_weights()
+        "actor_rollout_ref.rollout.max_num_batched_tokens=8192",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
 
         # ── Multi-turn tool calling ───────────────────────────────────────────
@@ -338,6 +358,8 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.actor.optim.lr=5e-7",
         "actor_rollout_ref.actor.use_dynamic_bsz=true",
         "actor_rollout_ref.actor.ppo_mini_batch_size=16",
+        # FIX: was (prompt+response)*2 = 36864, now prompt+response = 18432
+        # ppo_max_token_len_per_gpu is a per-GPU budget, not a doubled value
         f"actor_rollout_ref.actor.ppo_max_token_len_per_gpu={ACTOR_MAX_TOKEN_LEN}",
         "actor_rollout_ref.actor.ulysses_sequence_parallel_size=4",
         # Keep actor on GPU — offloading would make training 3-4x slower
@@ -350,6 +372,7 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
         # ── Reference model -- FSDP ───────────────────────────────────────────
+        # FIX: was 73728 (wrong *2 of wrong actor value), now 36864
         f"actor_rollout_ref.ref.log_prob_max_token_len_per_gpu={LOGPROB_MAX_TOKEN_LEN}",
         # Offload ref model to CPU — only needed for KL, not on critical path
         # Frees ~15GB per GPU during rollout and weight sync
@@ -450,7 +473,9 @@ def main():
     print(f"  Exp    : {r['experiment']}")
     print(f"  Ckpt   : {r['ckpt_dir']}")
     print(f"  Context: prompt={MAX_PROMPT_LENGTH}  response={MAX_RESPONSE_LENGTH}  model_len={MAX_MODEL_LEN}")
+    print(f"  Tokens : actor_max={ACTOR_MAX_TOKEN_LEN}  logprob_max={LOGPROB_MAX_TOKEN_LEN}")
     print(f"  Sample : temp={TEMPERATURE}  top_p={TOP_P}")
+    print(f"  GPU mem: rollout_util=0.50  PYTORCH_ALLOC_CONF=expandable+max_split_512mb")
     print(f"  Mode   : {'Dense-only (MoE experts FROZEN)' if freeze else 'Full fine-tune'}")
     print(f"{'='*62}\n")
 
