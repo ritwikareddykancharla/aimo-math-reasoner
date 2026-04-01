@@ -1,12 +1,21 @@
 agent:
+  format: gpt-oss
+  max_turns: 8
+
+  tool_executor:
+    type: http
+    url: http://localhost:8888/execute
+    timeout: 30
+
   tools:
     - type: function
       function:
         name: python
         description: >
           Use this tool to execute Python code in a stateful environment.
-          Write assert statements to verify base cases before computing the final result.
-          Use print() to output results.
+          Use sympy, numpy, itertools for mathematical computation.
+          Write assert statements to verify base cases.
+          Use print() to output results — only printed output is returned.
         parameters:
           type: object
           properties:
