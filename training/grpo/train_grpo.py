@@ -43,6 +43,7 @@ DATA_ROOT    = os.path.join(PROJECT_ROOT, "data")
 CKPT_ROOT    = "/data/checkpoints"
 REWARD_FN    = os.path.join(PROJECT_ROOT, "training", "grpo", "reward_fn.py")
 AGENT_YAML   = os.path.join(PROJECT_ROOT, "training", "grpo", "agent.yaml")
+TOOLS_YAML   = os.path.join(PROJECT_ROOT, "training", "grpo", "tools.yaml")
 PATCH_SCRIPT = os.path.join(PROJECT_ROOT, "training", "grpo", "apply_freeze_patch.py")
 
 VERL_CONFIG  = "/home/ssm-user/.local/lib/python3.12/site-packages/verl/trainer/config"
@@ -297,6 +298,7 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.rollout.multi_turn.format=gpt-oss",
         # tool_parser removed -- not in AgentLoopConfig in verl 0.8.0.dev
         f"actor_rollout_ref.rollout.agent.agent_loop_config_path={AGENT_YAML}",
+        f"actor_rollout_ref.rollout.multi_turn.tool_config_path={TOOLS_YAML}",
 
         # ── Validation rollout settings ───────────────────────────────────────
         f"actor_rollout_ref.rollout.val_kwargs.top_p={TOP_P}",
