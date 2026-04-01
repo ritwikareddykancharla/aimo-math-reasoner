@@ -2,7 +2,7 @@
 AIMO3 GRPO Training — 2-Node Setup
   Node 1 (172.31.110.230) + Node 2 (172.31.106.192): 16x H100 global pool
   - FSDP actor/ref: sharded across ALL 16 GPUs
-  - SGLang rollout: TP=8 per node, async mode, gpt-oss tool format
+  - SGLang rollout: TP=16 cross-node, async mode, gpt-oss tool format
 
 Model: unsloth/gpt-oss-120b (120B MoE)
   - ~115B expert params: FROZEN
@@ -30,16 +30,22 @@ Changes vs previous version:
   - Removed min_p (not in RolloutConfig in this version)
   - Removed tool_parser (not in AgentLoopConfig in this version)
   - Fixed multi_turn prefix: use plain key (field exists, no ++ needed)
-  - Reduced MAX_RESPONSE_LENGTH to 16384, max_model_len to 24576
-  - Reduced gpu_memory_utilization to 0.5 to avoid OOM on weight sync
   - ref param_offload=true to free memory during rollout
   - expandable_segments=True + max_split_size_mb=512 to reduce fragmentation
   - Fixed LD_LIBRARY_PATH for Ray worker subprocesses on both nodes
-  - FIX: ACTOR_MAX_TOKEN_LEN = prompt+response (not *2) — was 36864, now 18432
-  - FIX: LOGPROB_MAX_TOKEN_LEN = actor*2 — was 73728, now 36864
-  - FIX: gpu_memory_utilization reduced from 0.6 → 0.5
-  - FIX: max_split_size_mb=512 added to PYTORCH_CUDA_ALLOC_CONF
-  - FIX: max_num_batched_tokens=8192 cap on SGLang KV cache pre-allocation
+  - FIX: ACTOR_MAX_TOKEN_LEN = prompt+response (not *2) — was 36864, now 10240
+  - FIX: LOGPROB_MAX_TOKEN_LEN = actor*2 — was 73728, now 20480
+  - FIX: PYTORCH_CUDA_ALLOC_CONF → PYTORCH_ALLOC_CONF (torch 2.9+ deprecation)
+  - FIX: SGLang TP=8 per-node → TP=16 cross-node
+         Model/GPU: 28 GB → 14 GB
+         KV budget: 4 GB  → 26 GB  (enough for n=8 at 8K context)
+         Trade-off: single generation group (vs 2), cross-node all-reduce
+  - FIX: MAX_RESPONSE_LENGTH 16384 → 8192 (4x golden answer length, halves KV need)
+  - FIX: MAX_MODEL_LEN 24576 → 11264 (prompt 2048 + response 8192 + buffer 1024)
+  - FIX: gpu_memory_utilization 0.5 → 0.50 (kept, now safe with TP=16)
+  - FIX: update_weights_bucket_bytes=1073741824 (1 GB buckets)
+         Prevents OOM during weight sync clone — was trying 4 GB contiguous alloc
+  - REMOVED: max_num_batched_tokens cap (no longer needed with TP=16 KV headroom)
 """
 
 import subprocess
@@ -90,20 +96,26 @@ ROUNDS = {
 
 # ── Hyperparameters ───────────────────────────────────────────────────────────
 MAX_PROMPT_LENGTH    = 2048
-MAX_RESPONSE_LENGTH  = 16384   # Reduced from 32768 — 16k is enough for AIMO reasoning
-                                # Halves KV cache requirement
+MAX_RESPONSE_LENGTH  = 8192    # Reduced from 16384 → 8192
+                                # 4x longer than typical golden answers
+                                # Halves KV cache requirement vs 16K
+                                # n=8 at 8K context needs ~23 GB KV — fits in 26 GB budget
 
-# max_model_len = MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH + buffer = 24576
-MAX_MODEL_LEN = 24576
+# max_model_len = MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH + buffer
+# 2048 + 8192 + 1024 = 11264
+MAX_MODEL_LEN = 11264
 
-# FIX: was (MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH) * 2 = 36864
-# The *2 was wrong — ppo_max_token_len_per_gpu is a per-GPU budget, not doubled.
-# Actual max sequence = prompt + response = 2048 + 16384 = 18432
-ACTOR_MAX_TOKEN_LEN   = MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH   # 18432
+# ppo_max_token_len_per_gpu = prompt + response (per-GPU budget, not doubled)
+# 2048 + 8192 = 10240
+ACTOR_MAX_TOKEN_LEN   = MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH   # 10240
 
-# FIX: was ACTOR_MAX_TOKEN_LEN * 2 of the old (wrong) value = 73728
-# Now correctly 18432 * 2 = 36864 — still generous for ref log prob batching
-LOGPROB_MAX_TOKEN_LEN = ACTOR_MAX_TOKEN_LEN * 2                   # 36864
+# ref log_prob batching — 2x actor is generous
+LOGPROB_MAX_TOKEN_LEN = ACTOR_MAX_TOKEN_LEN * 2                   # 20480
+
+# SGLang rollout samples per prompt
+# n=8 gives good GRPO gradient variance reduction
+# With TP=16 + 26 GB KV budget, n=8 at 8K context needs ~23 GB → fits
+ROLLOUT_N = 8
 
 TEMPERATURE = 1.0
 TOP_P       = 1.0
@@ -317,22 +329,26 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.model.use_remove_padding=true",
         "actor_rollout_ref.model.enable_gradient_checkpointing=true",
 
-        # ── Rollout -- SGLang 0.5.9, TP=8 per node, async, gpt-oss tools ─────
+        # ── Rollout -- SGLang 0.5.9, TP=16 cross-node, async, gpt-oss tools ────
         "actor_rollout_ref.rollout.name=sglang",
         "actor_rollout_ref.rollout.mode=async",
-        "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
-        # FIX: reduced from 0.6 → 0.5
-        # SGLang KV cache + FSDP unshard peak both land on the same GPUs.
-        # 0.5 leaves ~10GB headroom per GPU for the state_dict gather.
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.5",
-        "actor_rollout_ref.rollout.n=8",
+        # TP=16 cross-node (was TP=8 per-node):
+        #   Model per GPU : 28 GB → 14 GB
+        #   KV budget     :  4 GB → 26 GB  (enough for n=8 at 8K context)
+        #   Trade-off     : single generation group, cross-node all-reduce per layer
+        #   But KV was completely starved at TP=8 — this is the right call
+        "actor_rollout_ref.rollout.tensor_model_parallel_size=16",
+        # util=0.50 is now safe — SGLang model shard is only 14 GB at TP=16
+        # leaving 26 GB for KV cache and ~7 GB free for FSDP weight sync
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.50",
+        f"actor_rollout_ref.rollout.n={ROLLOUT_N}",
         f"actor_rollout_ref.rollout.temperature={TEMPERATURE}",
         f"actor_rollout_ref.rollout.top_p={TOP_P}",
-        # Reduced from 65536 — actual max is 2048+16384=18432, 24576 gives buffer
+        # 2048 + 8192 + 1024 buffer = 11264
         f"actor_rollout_ref.rollout.max_model_len={MAX_MODEL_LEN}",
-        # FIX: cap SGLang KV cache pre-allocation to avoid consuming headroom
-        # that FSDP needs during update_weights()
-        "actor_rollout_ref.rollout.max_num_batched_tokens=8192",
+        # 1 GB weight-sync buckets — prevents OOM during update_weights clone
+        # Old default was ~4 GB contiguous alloc which exceeded free memory
+        "actor_rollout_ref.rollout.update_weights_bucket_bytes=1073741824",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
 
         # ── Multi-turn tool calling ───────────────────────────────────────────
@@ -465,7 +481,8 @@ def main():
     print(f"  Node 1 : {NODE1_IP}  (8xH100)")
     print(f"  Node 2 : {NODE2_IP}  (8xH100)")
     print(f"  Comms  : NCCL over EFA (confirmed working)")
-    print(f"  Rollout: SGLang 0.5.9  TP=8/node  async  gpt-oss tools")
+    print(f"  Rollout: SGLang 0.5.9  TP=16 cross-node  async  gpt-oss tools")
+    print(f"           model/GPU=14GB  KV=26GB  util=0.50  bucket=1GB")
     print(f"  FSDP   : sharded across 16 GPUs  (actor on GPU, ref offloaded)")
     print(f"  verl   : 0.8.0.dev  torch: 2.9.1+cu128  ray: 2.54.1")
     print(f"  Data   : {r['data']}")
@@ -474,8 +491,8 @@ def main():
     print(f"  Ckpt   : {r['ckpt_dir']}")
     print(f"  Context: prompt={MAX_PROMPT_LENGTH}  response={MAX_RESPONSE_LENGTH}  model_len={MAX_MODEL_LEN}")
     print(f"  Tokens : actor_max={ACTOR_MAX_TOKEN_LEN}  logprob_max={LOGPROB_MAX_TOKEN_LEN}")
-    print(f"  Sample : temp={TEMPERATURE}  top_p={TOP_P}")
-    print(f"  GPU mem: rollout_util=0.50  PYTORCH_ALLOC_CONF=expandable+max_split_512mb")
+    print(f"  Sample : n={ROLLOUT_N}  temp={TEMPERATURE}  top_p={TOP_P}")
+    print(f"  GPU mem: PYTORCH_ALLOC_CONF=expandable+max_split_512mb")
     print(f"  Mode   : {'Dense-only (MoE experts FROZEN)' if freeze else 'Full fine-tune'}")
     print(f"{'='*62}\n")
 
