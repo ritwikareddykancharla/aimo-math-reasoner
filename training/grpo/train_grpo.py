@@ -348,7 +348,7 @@ def build_cmd(r: dict, freeze: bool) -> list:
         f"actor_rollout_ref.rollout.max_model_len={MAX_MODEL_LEN}",
         # 1 GB weight-sync buckets — prevents OOM during update_weights clone
         # Old default was ~4 GB contiguous alloc which exceeded free memory
-        "actor_rollout_ref.rollout.update_weights_bucket_bytes=1073741824",
+        # "actor_rollout_ref.rollout.update_weights_bucket_bytes=1073741824",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
 
         # ── Multi-turn tool calling ───────────────────────────────────────────
