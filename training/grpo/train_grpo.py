@@ -30,6 +30,11 @@ Changes vs previous version:
   - Removed min_p (not in RolloutConfig in this version)
   - Removed tool_parser (not in AgentLoopConfig in this version)
   - Fixed multi_turn prefix: use plain key (field exists, no ++ needed)
+  - Reduced MAX_RESPONSE_LENGTH to 16384, max_model_len to 24576
+  - Reduced gpu_memory_utilization to 0.6 to avoid OOM on weight sync
+  - ref param_offload=true to free memory during rollout
+  - expandable_segments=True to reduce memory fragmentation
+  - Fixed LD_LIBRARY_PATH for Ray worker subprocesses on both nodes
 """
 
 import subprocess
@@ -80,7 +85,11 @@ ROUNDS = {
 
 # ── Hyperparameters ───────────────────────────────────────────────────────────
 MAX_PROMPT_LENGTH    = 2048
-MAX_RESPONSE_LENGTH  = 32768
+MAX_RESPONSE_LENGTH  = 16384   # Reduced from 32768 — 16k is enough for AIMO reasoning
+                                # Halves KV cache requirement
+
+# max_model_len = MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH + buffer = 24576
+MAX_MODEL_LEN = 24576
 
 ACTOR_MAX_TOKEN_LEN   = (MAX_PROMPT_LENGTH + MAX_RESPONSE_LENGTH) * 2
 LOGPROB_MAX_TOKEN_LEN = ACTOR_MAX_TOKEN_LEN * 2
@@ -228,25 +237,37 @@ def build_env() -> dict:
     """
     env = os.environ.copy()
 
+    # Remove conflicting alloc conf — we set our own below
     for key in ("PYTORCH_CUDA_ALLOC_CONF", "PYTORCH_ALLOC_CONF"):
         env.pop(key, None)
     for key in ("TORCH_DISTRIBUTED_BACKEND", "GLOO_SOCKET_IFNAME"):
         env.pop(key, None)
 
-    existing_ld = env.get("LD_LIBRARY_PATH", "")
-    new_ld = EFA_LD_LIBRARY_PATH + (":" + existing_ld if existing_ld else "")
+    # Build LD_LIBRARY_PATH including CUDA 12 paths for both nodes
+    # Ray worker subprocesses need this explicitly — ldconfig alone is not enough
+    cuda_paths = (
+        "/usr/local/cuda/targets/x86_64-linux/lib:"
+        "/usr/local/cuda-12.8/lib64:"
+        "/home/ssm-user/.local/lib/python3.12/site-packages/nvidia/cuda_runtime/lib"
+    )
+    existing_ld = os.environ.get("LD_LIBRARY_PATH", "")
+    new_ld = cuda_paths + ":" + EFA_LD_LIBRARY_PATH + (":" + existing_ld if existing_ld else "")
 
     env.update({
+        # ── Memory management ─────────────────────────────────────────────────
+        # expandable_segments reduces fragmentation during state_dict allocation
+        "PYTORCH_CUDA_ALLOC_CONF":         "expandable_segments:True",
+
+        # ── CUDA paths ────────────────────────────────────────────────────────
+        "PATH":                            "/usr/local/cuda/bin:" + env.get("PATH", ""),
+        "CUDA_HOME":                       "/usr/local/cuda",
+        "LD_LIBRARY_PATH":                 new_ld,
+
         # ── NCCL over EFA ────────────────────────────────────────────────────
-       # In build_env():
-        "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True",
-        "PATH": "/usr/local/cuda/bin:" + env.get("PATH", ""),
-        "CUDA_HOME": "/usr/local/cuda",
         "NCCL_DEBUG":                      "WARN",
         "FI_EFA_USE_DEVICE_RDMA":          "1",
         "FI_EFA_FORK_SAFE":                "1",
         "NCCL_SOCKET_IFNAME":              "enp71s0",
-        "LD_LIBRARY_PATH":                 new_ld,
 
         # ── Distributed ──────────────────────────────────────────────────────
         "MASTER_ADDR":                     NODE1_IP,
@@ -256,25 +277,14 @@ def build_env() -> dict:
         "TORCH_DIST_INIT_BARRIER_TIMEOUT": "1800",
         "NCCL_TIMEOUT":                    "1800",
 
-        # ── SGLang / vLLM backend hints ───────────────────────────────────────
+        # ── SGLang hints ──────────────────────────────────────────────────────
         "VLLM_USE_V1":                     "1",
         "VLLM_ATTENTION_BACKEND":          "FLASH_ATTN",
+        "SGLANG_JIT_CACHE":                "1",
 
         # ── verl / hydra verbosity ────────────────────────────────────────────
         "HYDRA_FULL_ERROR":                "1",
         "RAY_LOGGING_LEVEL":               "DEBUG",
-
-          # Force SGLang to use pre-cached JIT kernels
-        # and not recompile during Ray worker init
-        "SGLANG_JIT_CACHE":  "1",
-        
-        # Fix LD path for Ray worker subprocesses on both nodes
-        "LD_LIBRARY_PATH": (
-            "/usr/local/cuda/targets/x86_64-linux/lib:"
-            "/home/ssm-user/.local/lib/python3.12/site-packages/nvidia/cuda_runtime/lib:"
-            + EFA_LD_LIBRARY_PATH
-            + (":" + os.environ.get("LD_LIBRARY_PATH", ""))
-        )
     })
     return env
 
@@ -296,21 +306,20 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.rollout.name=sglang",
         "actor_rollout_ref.rollout.mode=async",
         "actor_rollout_ref.rollout.tensor_model_parallel_size=8",
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.5",
+        # Reduced from 0.7 — leaves room for FSDP state_dict during weight sync
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.6",
         "actor_rollout_ref.rollout.n=8",
         f"actor_rollout_ref.rollout.temperature={TEMPERATURE}",
         f"actor_rollout_ref.rollout.top_p={TOP_P}",
-        # min_p removed -- not in RolloutConfig in verl 0.8.0.dev
-        "actor_rollout_ref.rollout.max_model_len=65536",
+        # Reduced from 65536 — actual max is 2048+16384=18432, 24576 gives buffer
+        f"actor_rollout_ref.rollout.max_model_len={MAX_MODEL_LEN}",
         "actor_rollout_ref.rollout.log_prob_micro_batch_size_per_gpu=1",
 
-        # ── Multi-turn tool calling (MultiTurnConfig fields) ──────────────────
-        # multi_turn exists as a field in RolloutConfig so no ++ prefix needed
+        # ── Multi-turn tool calling ───────────────────────────────────────────
         "actor_rollout_ref.rollout.multi_turn.enable=true",
         "actor_rollout_ref.rollout.multi_turn.max_user_turns=8",
         "actor_rollout_ref.rollout.multi_turn.max_assistant_turns=8",
         "actor_rollout_ref.rollout.multi_turn.format=gpt-oss",
-        # tool_parser removed -- not in AgentLoopConfig in verl 0.8.0.dev
         f"actor_rollout_ref.rollout.agent.agent_loop_config_path={AGENT_YAML}",
         f"actor_rollout_ref.rollout.multi_turn.tool_config_path={TOOLS_YAML}",
 
@@ -331,16 +340,19 @@ def build_cmd(r: dict, freeze: bool) -> list:
         "actor_rollout_ref.actor.ppo_mini_batch_size=16",
         f"actor_rollout_ref.actor.ppo_max_token_len_per_gpu={ACTOR_MAX_TOKEN_LEN}",
         "actor_rollout_ref.actor.ulysses_sequence_parallel_size=4",
+        # Keep actor on GPU — offloading would make training 3-4x slower
         "actor_rollout_ref.actor.fsdp_config.param_offload=false",
         "actor_rollout_ref.actor.fsdp_config.optimizer_offload=false",
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
-        # Required for mixed requires_grad (frozen experts + trainable dense).
+        # Required for mixed requires_grad (frozen experts + trainable dense)
         "actor_rollout_ref.actor.fsdp_config.use_orig_params=true",
         "actor_rollout_ref.actor.checkpoint.save_contents=['model']",
 
         # ── Reference model -- FSDP ───────────────────────────────────────────
         f"actor_rollout_ref.ref.log_prob_max_token_len_per_gpu={LOGPROB_MAX_TOKEN_LEN}",
+        # Offload ref model to CPU — only needed for KL, not on critical path
+        # Frees ~15GB per GPU during rollout and weight sync
         "actor_rollout_ref.ref.fsdp_config.param_offload=true",
         "actor_rollout_ref.ref.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.ref.fsdp_config.model_dtype=bfloat16",
@@ -431,13 +443,13 @@ def main():
     print(f"  Node 2 : {NODE2_IP}  (8xH100)")
     print(f"  Comms  : NCCL over EFA (confirmed working)")
     print(f"  Rollout: SGLang 0.5.9  TP=8/node  async  gpt-oss tools")
-    print(f"  FSDP   : sharded across 16 GPUs  (offload=false)")
+    print(f"  FSDP   : sharded across 16 GPUs  (actor on GPU, ref offloaded)")
     print(f"  verl   : 0.8.0.dev  torch: 2.9.1+cu128  ray: 2.54.1")
     print(f"  Data   : {r['data']}")
     print(f"  Model  : {r['model']}")
     print(f"  Exp    : {r['experiment']}")
     print(f"  Ckpt   : {r['ckpt_dir']}")
-    print(f"  Context: prompt={MAX_PROMPT_LENGTH}  response={MAX_RESPONSE_LENGTH}  model_len=65536")
+    print(f"  Context: prompt={MAX_PROMPT_LENGTH}  response={MAX_RESPONSE_LENGTH}  model_len={MAX_MODEL_LEN}")
     print(f"  Sample : temp={TEMPERATURE}  top_p={TOP_P}")
     print(f"  Mode   : {'Dense-only (MoE experts FROZEN)' if freeze else 'Full fine-tune'}")
     print(f"{'='*62}\n")
