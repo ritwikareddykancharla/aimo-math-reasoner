@@ -42,7 +42,8 @@ Changes vs previous version:
          Trade-off: single generation group (vs 2), cross-node all-reduce
   - FIX: MAX_RESPONSE_LENGTH 16384 → 8192 (4x golden answer length, halves KV need)
   - FIX: MAX_MODEL_LEN 24576 → 11264 (prompt 2048 + response 8192 + buffer 1024)
-  - FIX: gpu_memory_utilization 0.5 → 0.50 (kept, now safe with TP=16)
+  - FIX: gpu_memory_utilization 0.50 → 0.40 (leaves more room for FSDP compute_log_prob)
+  - FIX: train_batch_size 128 → 32 (reduces OOM during compute_log_prob forward pass)
   - FIX: update_weights_bucket_bytes=1073741824 (1 GB buckets)
          Prevents OOM during weight sync clone — was trying 4 GB contiguous alloc
   - REMOVED: max_num_batched_tokens cap (no longer needed with TP=16 KV headroom)
@@ -338,9 +339,9 @@ def build_cmd(r: dict, freeze: bool) -> list:
         #   Trade-off     : single generation group, cross-node all-reduce per layer
         #   But KV was completely starved at TP=8 — this is the right call
         "actor_rollout_ref.rollout.tensor_model_parallel_size=16",
-        # util=0.50 is now safe — SGLang model shard is only 14 GB at TP=16
-        # leaving 26 GB for KV cache and ~7 GB free for FSDP weight sync
-        "actor_rollout_ref.rollout.gpu_memory_utilization=0.50",
+        # FIX: reduced from 0.50 → 0.40 to leave more headroom for FSDP compute_log_prob
+        # SGLang and FSDP share GPUs — SGLang needs to give back memory during log prob phase
+        "actor_rollout_ref.rollout.gpu_memory_utilization=0.40",
         f"actor_rollout_ref.rollout.n={ROLLOUT_N}",
         f"actor_rollout_ref.rollout.temperature={TEMPERATURE}",
         f"actor_rollout_ref.rollout.top_p={TOP_P}",
@@ -405,7 +406,10 @@ def build_cmd(r: dict, freeze: bool) -> list:
         f"data.train_files={r['data']}",
         f"data.val_files={r['data']}",
         "data.return_raw_chat=true",
-        "data.train_batch_size=128",
+        # FIX: reduced from 128 → 32 to avoid OOM during compute_log_prob
+        # 32 prompts x 8 responses = 256 sequences per step (was 1024)
+        # Trades fewer steps (164 vs 41) for memory safety
+        "data.train_batch_size=32",
         f"data.max_prompt_length={MAX_PROMPT_LENGTH}",
         f"data.max_response_length={MAX_RESPONSE_LENGTH}",
         "data.filter_overlong_prompts=true",
@@ -482,7 +486,7 @@ def main():
     print(f"  Node 2 : {NODE2_IP}  (8xH100)")
     print(f"  Comms  : NCCL over EFA (confirmed working)")
     print(f"  Rollout: SGLang 0.5.9  TP=16 cross-node  async  gpt-oss tools")
-    print(f"           model/GPU=14GB  KV=26GB  util=0.50  bucket=1GB")
+    print(f"           model/GPU=14GB  KV=24GB  util=0.40  bucket=1GB")
     print(f"  FSDP   : sharded across 16 GPUs  (actor on GPU, ref offloaded)")
     print(f"  verl   : 0.8.0.dev  torch: 2.9.1+cu128  ray: 2.54.1")
     print(f"  Data   : {r['data']}")
@@ -492,6 +496,7 @@ def main():
     print(f"  Context: prompt={MAX_PROMPT_LENGTH}  response={MAX_RESPONSE_LENGTH}  model_len={MAX_MODEL_LEN}")
     print(f"  Tokens : actor_max={ACTOR_MAX_TOKEN_LEN}  logprob_max={LOGPROB_MAX_TOKEN_LEN}")
     print(f"  Sample : n={ROLLOUT_N}  temp={TEMPERATURE}  top_p={TOP_P}")
+    print(f"  Batch  : train_batch_size=32  (was 128, reduced for OOM fix)")
     print(f"  GPU mem: PYTORCH_ALLOC_CONF=expandable+max_split_512mb")
     print(f"  Mode   : {'Dense-only (MoE experts FROZEN)' if freeze else 'Full fine-tune'}")
     print(f"{'='*62}\n")
