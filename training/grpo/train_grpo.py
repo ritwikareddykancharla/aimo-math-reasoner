@@ -44,6 +44,7 @@ Changes vs previous version:
   - FIX: MAX_MODEL_LEN 24576 → 11264 (prompt 2048 + response 8192 + buffer 1024)
   - FIX: gpu_memory_utilization 0.50 → 0.40 (leaves more room for FSDP compute_log_prob)
   - FIX: train_batch_size 128 → 32 (reduces OOM during compute_log_prob forward pass)
+  - FIX: actor param_offload=true (SGLang 22GB + FSDP 56GB = 78.5GB, no room on 79GB GPU)
   - FIX: update_weights_bucket_bytes=1073741824 (1 GB buckets)
          Prevents OOM during weight sync clone — was trying 4 GB contiguous alloc
   - REMOVED: max_num_batched_tokens cap (no longer needed with TP=16 KV headroom)
@@ -379,8 +380,10 @@ def build_cmd(r: dict, freeze: bool) -> list:
         # ppo_max_token_len_per_gpu is a per-GPU budget, not a doubled value
         f"actor_rollout_ref.actor.ppo_max_token_len_per_gpu={ACTOR_MAX_TOKEN_LEN}",
         "actor_rollout_ref.actor.ulysses_sequence_parallel_size=4",
-        # Keep actor on GPU — offloading would make training 3-4x slower
-        "actor_rollout_ref.actor.fsdp_config.param_offload=false",
+        # FIX: offload actor to CPU during compute_log_prob
+        # SGLang (22GB) + FSDP actor (56GB) = 78.5GB on a 79GB GPU — no room
+        # Offloading is slower but the only option given memory constraints
+        "actor_rollout_ref.actor.fsdp_config.param_offload=true",
         "actor_rollout_ref.actor.fsdp_config.optimizer_offload=false",
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
