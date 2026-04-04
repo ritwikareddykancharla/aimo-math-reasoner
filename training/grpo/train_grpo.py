@@ -44,9 +44,10 @@ Changes vs previous version:
   - FIX: MAX_MODEL_LEN 24576 → 11264 (prompt 2048 + response 8192 + buffer 1024)
   - FIX: gpu_memory_utilization 0.50 → 0.40 (leaves more room for FSDP compute_log_prob)
   - FIX: train_batch_size 128 → 32 (reduces OOM during compute_log_prob forward pass)
-  - FIX: rollout.mode async → sync (SGLang and FSDP share GPUs, async causes OOM + verl
-         assertion error in offload_fsdp_model_to_cpu. Sync ensures SGLang releases GPU
-         before FSDP runs — slower throughput but stable)
+  - FIX: rollout.mode sync removed (verl 0.8.0.dev removed sync mode), back to async
+  - FIX: free_cache_engine=true (explicitly free SGLang KV cache after rollout)
+  - FIX: actor param_offload=true + optimizer_offload=true per official verl SGLang docs
+         SGLang + FSDP colocated on same GPUs requires CPU offloading to avoid OOM
   - FIX: update_weights_bucket_bytes=1073741824 (1 GB buckets)
          Prevents OOM during weight sync clone — was trying 4 GB contiguous alloc
   - REMOVED: max_num_batched_tokens cap (no longer needed with TP=16 KV headroom)
@@ -335,10 +336,12 @@ def build_cmd(r: dict, freeze: bool) -> list:
 
         # ── Rollout -- SGLang 0.5.9, TP=16 cross-node, async, gpt-oss tools ────
         "actor_rollout_ref.rollout.name=sglang",
-        # FIX: switched from async → sync to prevent SGLang/FSDP GPU memory conflict
-        # async mode overlaps rollout and training on same GPUs → OOM + verl assertion error
-        # sync mode: SGLang generates → releases GPU → FSDP trains → no overlap
-        "actor_rollout_ref.rollout.mode=sync",
+        # async is the only supported mode in verl 0.8.0.dev (sync was removed)
+        "actor_rollout_ref.rollout.mode=async",
+        # FIX: explicitly free SGLang KV cache after rollout before FSDP runs
+        # Default is True but being explicit — this is the official fix for
+        # SGLang + FSDP colocated OOM per verl docs
+        "actor_rollout_ref.rollout.free_cache_engine=true",
         # TP=16 cross-node (was TP=8 per-node):
         #   Model per GPU : 28 GB → 14 GB
         #   KV budget     :  4 GB → 26 GB  (enough for n=8 at 8K context)
@@ -385,9 +388,11 @@ def build_cmd(r: dict, freeze: bool) -> list:
         # ppo_max_token_len_per_gpu is a per-GPU budget, not a doubled value
         f"actor_rollout_ref.actor.ppo_max_token_len_per_gpu={ACTOR_MAX_TOKEN_LEN}",
         "actor_rollout_ref.actor.ulysses_sequence_parallel_size=4",
-        # Keep actor on GPU — sync mode ensures SGLang is done before FSDP runs
-        "actor_rollout_ref.actor.fsdp_config.param_offload=false",
-        "actor_rollout_ref.actor.fsdp_config.optimizer_offload=false",
+        # FIX: offload actor params and optimizer to CPU per official verl SGLang docs
+        # SGLang + FSDP colocated on same GPUs requires offloading to avoid OOM
+        # See: https://verl.readthedocs.io/en/latest/workers/sglang_worker.html
+        "actor_rollout_ref.actor.fsdp_config.param_offload=true",
+        "actor_rollout_ref.actor.fsdp_config.optimizer_offload=true",
         "actor_rollout_ref.actor.fsdp_config.dtype=bfloat16",
         "actor_rollout_ref.actor.fsdp_config.model_dtype=bfloat16",
         # Required for mixed requires_grad (frozen experts + trainable dense)
